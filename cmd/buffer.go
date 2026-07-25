@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"strconv"
 	"strings"
@@ -18,13 +19,29 @@ func NewBufferCmd() *cobra.Command {
 		replenishmentsStr string
 		dbPath            string
 		noSave            bool
+		interactive       bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "buffer",
 		Short: "Gerencia o Buffer Operacional (A Caixinha) e calcula a Taxa de Consumo Media (TCM)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			in := cmd.InOrStdin()
 			out := cmd.OutOrStdout()
+
+			if interactive || cap <= 0 {
+				fmt.Fprintln(out, "=== Modo Interativo: Gestão do Buffer Operacional (A Caixinha) ===")
+				scanner := bufio.NewScanner(in)
+				var err error
+				if cap, err = PromptFloat(scanner, out, "Teto fixo alocado para o trabalho (T em R$)", cap); err != nil {
+					return err
+				}
+				if remainingBalance, err = PromptFloat(scanner, out, "Saldo não utilizado retido ao final do ciclo (S_rem em R$)", remainingBalance); err != nil {
+					return err
+				}
+				fmt.Fprintln(out, "================================================================")
+			}
+
 			fmt.Fprintf(out, "=== Gestão do Buffer Operacional (A Caixinha) ===\n")
 
 			cycle := p2t.BufferCycle{
@@ -97,8 +114,7 @@ func NewBufferCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&replenishmentsStr, "replenishments", "p", "", "Historico de valores de reposicao separados por virgula (ex: 120,150,110)")
 	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
 	cmd.Flags().BoolVar(&noSave, "no-save", false, "Nao salvar este registro no banco de dados SQLite")
-
-	_ = cmd.MarkFlagRequired("cap")
+	cmd.Flags().BoolVarP(&interactive, "interactive", "I", false, "Modo interativo por perguntas")
 
 	return cmd
 }

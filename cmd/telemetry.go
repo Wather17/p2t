@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"strconv"
 	"strings"
@@ -22,12 +23,43 @@ func NewTelemetryCmd() *cobra.Command {
 		idtHistoryStr   string
 		dbPath          string
 		noSave          bool
+		interactive     bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "telemetry",
 		Short: "Calcula o VRH (Valor Real da Hora Dedicada) e o IDT (Indice de Desperdicio de Trabalho)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			in := cmd.InOrStdin()
+			out := cmd.OutOrStdout()
+
+			// Se a flag interactive for explicitamente usada ou se os valores obrigatorios forem omissos
+			if interactive || (grossSalary <= 0 && contractHours <= 0) {
+				fmt.Fprintln(out, "=== Modo Interativo: Telemetria p2t ===")
+				scanner := bufio.NewScanner(in)
+				var err error
+
+				if grossSalary, err = PromptFloat(scanner, out, "Salário Bruto Nominal (SB em R$)", grossSalary); err != nil {
+					return err
+				}
+				if contractHours, err = PromptFloat(scanner, out, "Carga Horária Mensal Contratual (HC em horas)", contractHours); err != nil {
+					return err
+				}
+				if commuteHours, err = PromptFloat(scanner, out, "Horas Mensais gastas exclusivamente em Deslocamento (HD)", commuteHours); err != nil {
+					return err
+				}
+				if fixedDeductions, err = PromptFloat(scanner, out, "Descontos Legais Fixos (DF - INSS, IRRF)", fixedDeductions); err != nil {
+					return err
+				}
+				if errorDeductions, err = PromptFloat(scanner, out, "Descontos por Erros Operacionais (DE)", errorDeductions); err != nil {
+					return err
+				}
+				if invisibleCosts, err = PromptFloat(scanner, out, "Custos Invisíveis do Bolso para trabalhar (CI)", invisibleCosts); err != nil {
+					return err
+				}
+				fmt.Fprintln(out, "========================================")
+			}
+
 			input := p2t.TelemetryInput{
 				GrossSalary:     grossSalary,
 				FixedDeductions: fixedDeductions,
@@ -42,7 +74,6 @@ func NewTelemetryCmd() *cobra.Command {
 				return fmt.Errorf("erro no calculo de telemetria: %w", err)
 			}
 
-			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "=== Telemetria de Retorno de Tempo (p2t) ===\n")
 			fmt.Fprintf(out, "Carga Horaria Total (HT): %.2f h\n", res.TotalHours)
 			fmt.Fprintf(out, "Liquidez Real (SL): R$ %.2f\n", res.RealLiquidity)
@@ -107,9 +138,7 @@ func NewTelemetryCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&idtHistoryStr, "idt-history", "i", "", "Historico de IDTs anteriores separados por virgula (ex: 8.5,9.0)")
 	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
 	cmd.Flags().BoolVar(&noSave, "no-save", false, "Nao salvar este registro no banco de dados SQLite")
-
-	_ = cmd.MarkFlagRequired("gross-salary")
-	_ = cmd.MarkFlagRequired("contract-hours")
+	cmd.Flags().BoolVarP(&interactive, "interactive", "I", false, "Modo interativo por perguntas")
 
 	return cmd
 }
