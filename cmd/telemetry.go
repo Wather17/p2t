@@ -48,7 +48,16 @@ func NewTelemetryCmd() *cobra.Command {
 				if commuteHours, err = PromptFloat(scanner, out, "Horas Mensais gastas exclusivamente em Deslocamento (HD)", commuteHours); err != nil {
 					return err
 				}
-				if fixedDeductions, err = PromptFloat(scanner, out, "Descontos Legais Fixos (DF - INSS, IRRF)", fixedDeductions); err != nil {
+
+				// Calcula estimativa automatica de descontos legais se nao especificado
+				estimatedTaxes := p2t.EstimateLegalDeductions(grossSalary)
+				defaultDF := fixedDeductions
+				if defaultDF <= 0 {
+					defaultDF = estimatedTaxes.TotalDeductions
+				}
+
+				promptDFMsg := fmt.Sprintf("Descontos Legais Fixos (DF - INSS: R$ %.2f, IRRF: R$ %.2f)", estimatedTaxes.INSS, estimatedTaxes.IRRF)
+				if fixedDeductions, err = PromptFloat(scanner, out, promptDFMsg, defaultDF); err != nil {
 					return err
 				}
 				if errorDeductions, err = PromptFloat(scanner, out, "Descontos por Erros Operacionais (DE)", errorDeductions); err != nil {
@@ -58,6 +67,10 @@ func NewTelemetryCmd() *cobra.Command {
 					return err
 				}
 				fmt.Fprintln(out, "========================================")
+			} else if fixedDeductions <= 0 && grossSalary > 0 {
+				// Se nao forneceu os descontos fixos nas flags, calcula a estimativa automatica oficial
+				estimatedTaxes := p2t.EstimateLegalDeductions(grossSalary)
+				fixedDeductions = estimatedTaxes.TotalDeductions
 			}
 
 			input := p2t.TelemetryInput{
@@ -76,6 +89,7 @@ func NewTelemetryCmd() *cobra.Command {
 
 			fmt.Fprintf(out, "=== Telemetria de Retorno de Tempo (p2t) ===\n")
 			fmt.Fprintf(out, "Carga Horaria Total (HT): %.2f h\n", res.TotalHours)
+			fmt.Fprintf(out, "Descontos Legais Aplicados (DF): R$ %.2f\n", fixedDeductions)
 			fmt.Fprintf(out, "Liquidez Real (SL): R$ %.2f\n", res.RealLiquidity)
 			fmt.Fprintf(out, "Valor Real da Hora (VRH): R$ %.2f / h\n", res.VRH)
 			fmt.Fprintf(out, "Indice de Desperdicio (IDT): %.2f%%\n", res.IDT)
@@ -130,7 +144,7 @@ func NewTelemetryCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Float64VarP(&grossSalary, "gross-salary", "s", 0, "Salario Bruto (SB)")
-	cmd.Flags().Float64VarP(&fixedDeductions, "fixed-deductions", "f", 0, "Descontos Legais Fixos (DF)")
+	cmd.Flags().Float64VarP(&fixedDeductions, "fixed-deductions", "f", 0, "Descontos Legais Fixos (DF). Se 0, calcula INSS+IRRF automaticamente.")
 	cmd.Flags().Float64VarP(&errorDeductions, "error-deductions", "e", 0, "Descontos por Erros Operacionais (DE)")
 	cmd.Flags().Float64VarP(&invisibleCosts, "invisible-costs", "c", 0, "Custos Invisiveis de Permanencia (CI)")
 	cmd.Flags().Float64VarP(&contractHours, "contract-hours", "H", 0, "Horas Mensais Contratuais (HC)")
