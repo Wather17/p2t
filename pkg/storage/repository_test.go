@@ -60,8 +60,8 @@ func TestRepository_Telemetry(t *testing.T) {
 		t.Fatalf("esperado 3 registros no historico, obtido: %d", len(history))
 	}
 
-	if !almostEqual(history[2], res2.ID) {
-		t.Errorf("esperado ultimo IDT=%.2f, obtido=%.2f", res2.ID, history[2])
+	if !almostEqual(history[2], res2.IDT) {
+		t.Errorf("esperado ultimo IDT=%.2f, obtido=%.2f", res2.IDT, history[2])
 	}
 }
 
