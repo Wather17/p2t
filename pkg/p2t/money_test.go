@@ -33,3 +33,29 @@ func TestMoneyRounding_IEEE754(t *testing.T) {
 		}
 	})
 }
+
+func TestParseBrazilianFloat(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected float64
+	}{
+		{"5000", 5000.00},
+		{"5000,50", 5000.50},
+		{"5000.50", 5000.50},
+		{"5.000,50", 5000.50},
+		{"R$ 5.000,50", 5000.50},
+		{"R$5000,50", 5000.50},
+		{"$ 1.250.000,75", 1250000.75},
+		{"160,0", 160.00},
+	}
+
+	for _, tt := range tests {
+		got, err := p2t.ParseBrazilianFloat(tt.input)
+		if err != nil {
+			t.Errorf("erro inesperado para input %s: %v", tt.input, err)
+		}
+		if got != tt.expected {
+			t.Errorf("para input %s esperado %.2f, obtido %.2f", tt.input, tt.expected, got)
+		}
+	}
+}

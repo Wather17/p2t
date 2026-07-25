@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
+
+	"github.com/Wather17/p2t/pkg/p2t"
 )
 
-// PromptFloat exibe a pergunta e le um float64 usando o scanner fornecido. Se a resposta for vazia e houver defaultValue, usa o defaultValue.
+// PromptFloat exibe a pergunta e le um float64 aceitando formatos brasileiros (virgula, R$, milhares).
 func PromptFloat(scanner *bufio.Scanner, w io.Writer, question string, defaultValue float64) (float64, error) {
 	for {
 		if defaultValue > 0 {
@@ -33,9 +34,9 @@ func PromptFloat(scanner *bufio.Scanner, w io.Writer, question string, defaultVa
 			continue
 		}
 
-		val, err := strconv.ParseFloat(text, 64)
+		val, err := p2t.ParseBrazilianFloat(text)
 		if err != nil || val < 0 {
-			fmt.Fprintln(w, "  -> Entrada inválida. Por favor digite um número maior ou igual a zero.")
+			fmt.Fprintln(w, "  -> Entrada inválida. Digite um número positivo (ex: 5000,50 ou R$ 5.000,50).")
 			continue
 		}
 

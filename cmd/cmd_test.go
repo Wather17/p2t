@@ -57,11 +57,11 @@ func TestTelemetryCmd_Success(t *testing.T) {
 	}
 }
 
-func TestTelemetryCmd_Interactive(t *testing.T) {
+func TestTelemetryCmd_InteractiveBrazilianFormat(t *testing.T) {
 	rootCmd := cmd.NewRootCmd()
 	outBuf := new(bytes.Buffer)
-	// Simula respostas do usuario: SB=5000, HC=160, HD=40, DF=800, DE=200, CI=300
-	inInput := "5000\n160\n40\n800\n200\n300\n"
+	// Simula respostas do usuario no formato brasileiro: SB="R$ 5.000,00", HC="160,0", HD="40", DF="800,00", DE="200,00", CI="300,00"
+	inInput := "R$ 5.000,00\n160,0\n40\n800,00\n200,00\n300,00\n"
 	inBuf := bytes.NewBufferString(inInput)
 
 	rootCmd.SetIn(inBuf)
@@ -115,11 +115,11 @@ func TestBufferCmd_Success(t *testing.T) {
 	}
 }
 
-func TestBufferCmd_Interactive(t *testing.T) {
+func TestBufferCmd_InteractiveBrazilianFormat(t *testing.T) {
 	rootCmd := cmd.NewRootCmd()
 	outBuf := new(bytes.Buffer)
-	// Simula respostas do usuario: T=300, S_rem=180
-	inInput := "300\n180\n"
+	// Simula respostas no formato brasileiro: T="R$ 300,00", S_rem="180,00"
+	inInput := "R$ 300,00\n180,00\n"
 	inBuf := bytes.NewBufferString(inInput)
 
 	rootCmd.SetIn(inBuf)
