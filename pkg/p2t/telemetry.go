@@ -16,20 +16,20 @@ const (
 
 // TelemetryInput engloba as variaveis de um ciclo mensal para telemetria de tempo e retorno.
 type TelemetryInput struct {
-	GrossSalary    float64 // SB: Salario Bruto
+	GrossSalary     float64 // SB: Salario Bruto
 	FixedDeductions float64 // DF: Descontos Legais Fixos
 	ErrorDeductions float64 // DE: Descontos decorrentes de erros operacionais
-	InvisibleCosts float64 // CI: Custos invisiveis do bolso
+	InvisibleCosts  float64 // CI: Custos invisiveis do bolso
 	ContractHours   float64 // HC: Horas contratualmente devidas
 	CommuteHours    float64 // HD: Horas mensais de deslocamento
 }
 
 // TelemetryResult contem as metricas deduzidas para o ciclo.
 type TelemetryResult struct {
-	TotalHours     float64 // HT = HC + HD
-	RealLiquidity  float64 // SL = SB - (DF + DE + CI)
-	VRH            float64 // VRH = SL / HT
-	IDT            float64 // IDT = ((DE + CI) / SB) * 100
+	TotalHours    float64 // HT = HC + HD
+	RealLiquidity float64 // SL = SB - (DF + DE + CI)
+	VRH           float64 // VRH = SL / HT
+	IDT           float64 // IDT = ((DE + CI) / SB) * 100
 }
 
 // Validate verifica a consistencia dos parametros de entrada.
@@ -46,16 +46,16 @@ func (t TelemetryInput) Validate() error {
 	return nil
 }
 
-// CalculateTelemetry calcula HT, SL, VRH e IDT a partir de um TelemetryInput.
+// CalculateTelemetry calcula HT, SL, VRH e IDT a partir de um TelemetryInput com precisao monetaria.
 func CalculateTelemetry(input TelemetryInput) (TelemetryResult, error) {
 	if err := input.Validate(); err != nil {
 		return TelemetryResult{}, err
 	}
 
 	ht := input.ContractHours + input.CommuteHours
-	sl := input.GrossSalary - (input.FixedDeductions + input.ErrorDeductions + input.InvisibleCosts)
-	vrh := sl / ht
-	idt := ((input.ErrorDeductions + input.InvisibleCosts) / input.GrossSalary) * 100.0
+	sl := RoundCurrency(input.GrossSalary - (input.FixedDeductions + input.ErrorDeductions + input.InvisibleCosts))
+	vrh := RoundCurrency(sl / ht)
+	idt := RoundPercentage(((input.ErrorDeductions + input.InvisibleCosts) / input.GrossSalary) * 100.0)
 
 	return TelemetryResult{
 		TotalHours:    ht,
@@ -65,7 +65,7 @@ func CalculateTelemetry(input TelemetryInput) (TelemetryResult, error) {
 	}, nil
 }
 
-// CalculateIDT3 calculates the 3-month moving average of IDT values.
+// CalculateIDT3 calcula a media movel de 3 meses dos valores de IDT com precisao.
 func CalculateIDT3(idtHistory []float64) (float64, error) {
 	if len(idtHistory) < 3 {
 		return 0, fmt.Errorf("historico insuficiente para IDT3: esperado no minimo 3 registros, recebido %d", len(idtHistory))
@@ -73,11 +73,12 @@ func CalculateIDT3(idtHistory []float64) (float64, error) {
 	// Considera os 3 ultimos registros
 	recent := idtHistory[len(idtHistory)-3:]
 	sum := recent[0] + recent[1] + recent[2]
-	return sum / 3.0, nil
+	return RoundPercentage(sum / 3.0), nil
 }
 
 // EvaluateIDTZone determina a zona de decisao com base no IDT3 ou IDT atual.
 func EvaluateIDTZone(idt3 float64) (IDTZone, string) {
+	idt3 = RoundPercentage(idt3)
 	switch {
 	case idt3 < 10.0:
 		return ZoneGreen, "Estavel / Padrao Operacional"

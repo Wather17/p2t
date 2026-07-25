@@ -9,19 +9,19 @@ import (
 type EfficiencyDiagnosis string
 
 const (
-	HighEfficiency   EfficiencyDiagnosis = "Alta Eficiencia"
-	StableEfficiency EfficiencyDiagnosis = "Eficiencia Estavel"
+	HighEfficiency     EfficiencyDiagnosis = "Alta Eficiencia"
+	StableEfficiency   EfficiencyDiagnosis = "Eficiencia Estavel"
 	ConsumptionAnomaly EfficiencyDiagnosis = "Anomalia de Consumo"
-	AlertEfficiency   EfficiencyDiagnosis = "Alerta de Consumo Elevado"
+	AlertEfficiency     EfficiencyDiagnosis = "Alerta de Consumo Elevado"
 )
 
 // BufferCycle representa o registro de um ciclo mensal da Caixinha.
 type BufferCycle struct {
-	Cap            float64 // T: Teto fixo alocado
+	Cap              float64 // T: Teto fixo alocado
 	RemainingBalance float64 // S_rem: Saldo nao utilizado ao final do ciclo
 }
 
-// CalculateInvisibleCost calcula o C_I (custo invisivel/reposicao) do ciclo: C_I = T - S_rem.
+// CalculateInvisibleCost calcula o C_I (custo invisivel/reposicao) do ciclo: C_I = T - S_rem com precisao monetaria.
 func (b BufferCycle) CalculateInvisibleCost() (float64, error) {
 	if b.Cap <= 0 {
 		return 0, errors.New("teto do buffer (T) deve ser maior que zero")
@@ -32,7 +32,7 @@ func (b BufferCycle) CalculateInvisibleCost() (float64, error) {
 	if b.RemainingBalance > b.Cap {
 		return 0, fmt.Errorf("saldo remanescente (%.2f) nao pode exceder o teto (%.2f)", b.RemainingBalance, b.Cap)
 	}
-	return b.Cap - b.RemainingBalance, nil
+	return RoundCurrency(b.Cap - b.RemainingBalance), nil
 }
 
 // BufferMetrics guarda os resultados agregados de reposicao e consumo do buffer.
@@ -58,8 +58,8 @@ func CalculateBufferMetrics(cap float64, replenishments []float64) (BufferMetric
 		total += r
 	}
 
-	rBar := total / float64(len(replenishments))
-	tcm := (rBar / cap) * 100.0
+	rBar := RoundCurrency(total / float64(len(replenishments)))
+	tcm := RoundPercentage((rBar / cap) * 100.0)
 
 	return BufferMetrics{
 		AverageReplenishment: rBar,
@@ -69,6 +69,7 @@ func CalculateBufferMetrics(cap float64, replenishments []float64) (BufferMetric
 
 // DiagnoseEfficiency classifica a taxa de consumo media (TCM).
 func DiagnoseEfficiency(tcm float64) (EfficiencyDiagnosis, string) {
+	tcm = RoundPercentage(tcm)
 	switch {
 	case tcm < 45.0:
 		return HighEfficiency, "Otimizacao de custos de transporte/alimentacao"
