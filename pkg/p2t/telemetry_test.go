@@ -1,0 +1,135 @@
+package p2t_test
+
+import (
+	"math"
+	"testing"
+
+	"github.com/Wather17/p2t/pkg/p2t"
+)
+
+const floatTolerance = 0.0001
+
+func almostEqual(a, b float64) bool {
+	return math.Abs(a-b) < floatTolerance
+}
+
+func TestCalculateTelemetry_HappyPath(t *testing.T) {
+	input := p2t.TelemetryInput{
+		GrossSalary:     5000.0,
+		FixedDeductions: 800.0,
+		ErrorDeductions: 200.0,
+		InvisibleCosts:  300.0,
+		ContractHours:   160.0,
+		CommuteHours:    40.0,
+	}
+
+	result, err := p2t.CalculateTelemetry(input)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+
+	// HT = 160 + 40 = 200
+	if !almostEqual(result.TotalHours, 200.0) {
+		t.Errorf("esperado HT=200.0, obtido: %.2f", result.TotalHours)
+	}
+
+	// SL = 5000 - (800 + 200 + 300) = 3700
+	if !almostEqual(result.RealLiquidity, 3700.0) {
+		t.Errorf("esperado SL=3700.0, obtido: %.2f", result.RealLiquidity)
+	}
+
+	// VRH = 3700 / 200 = 18.5
+	if !almostEqual(result.VRH, 18.5) {
+		t.Errorf("esperado VRH=18.5, obtido: %.2f", result.VRH)
+	}
+
+	// IDT = ((200 + 300) / 5000) * 100 = 10.0%
+	if !almostEqual(result.IDT, 10.0) {
+		t.Errorf("esperado IDT=10.0, obtido: %.2f", result.IDT)
+	}
+}
+
+func TestCalculateTelemetry_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input p2t.TelemetryInput
+	}{
+		{
+			name: "GrossSalary Zero",
+			input: p2t.TelemetryInput{
+				GrossSalary:   0,
+				ContractHours: 160,
+			},
+		},
+		{
+			name: "ContractHours Zero",
+			input: p2t.TelemetryInput{
+				GrossSalary:   5000,
+				ContractHours: 0,
+			},
+		},
+		{
+			name: "Negative Fixed Deductions",
+			input: p2t.TelemetryInput{
+				GrossSalary:     5000,
+				ContractHours:   160,
+				FixedDeductions: -100,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := p2t.CalculateTelemetry(tt.input)
+			if err == nil {
+				t.Errorf("esperava erro de validacao para %s, mas obteve nil", tt.name)
+			}
+		})
+	}
+}
+
+func TestCalculateIDT3(t *testing.T) {
+	t.Run("Valido com 3+ elementos", func(t *testing.T) {
+		history := []float64{12.0, 8.0, 9.0, 11.0, 10.0} // ultimos 3: 9.0, 11.0, 10.0
+		idt3, err := p2t.CalculateIDT3(history)
+		if err != nil {
+			t.Fatalf("erro inesperado: %v", err)
+		}
+		expected := (9.0 + 11.0 + 10.0) / 3.0 // 10.0
+		if !almostEqual(idt3, expected) {
+			t.Errorf("esperado IDT3=%.2f, obtido=%.2f", expected, idt3)
+		}
+	})
+
+	t.Run("Historico insuficiente", func(t *testing.T) {
+		history := []float64{10.0, 12.0}
+		_, err := p2t.CalculateIDT3(history)
+		if err == nil {
+			t.Error("esperava erro para historico menor que 3 elementos")
+		}
+	})
+}
+
+func TestEvaluateIDTZone(t *testing.T) {
+	tests := []struct {
+		idt3         float64
+		expectedZone p2t.IDTZone
+	}{
+		{5.0, p2t.ZoneGreen},
+		{9.99, p2t.ZoneGreen},
+		{10.0, p2t.ZoneYellow},
+		{14.99, p2t.ZoneYellow},
+		{15.0, p2t.ZoneRed},
+		{25.0, p2t.ZoneRed},
+	}
+
+	for _, tt := range tests {
+		zone, desc := p2t.EvaluateIDTZone(tt.idt3)
+		if zone != tt.expectedZone {
+			t.Errorf("para IDT3=%.2f esperado zone %s, obtido %s", tt.idt3, tt.expectedZone, zone)
+		}
+		if desc == "" {
+			t.Errorf("descricao da zona nao deve ser vazia")
+		}
+	}
+}
