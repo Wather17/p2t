@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Wather17/p2t/pkg/p2t"
+	"github.com/Wather17/p2t/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,8 @@ func NewTelemetryCmd() *cobra.Command {
 		contractHours   float64
 		commuteHours    float64
 		idtHistoryStr   string
+		dbPath          string
+		noSave          bool
 	)
 
 	cmd := &cobra.Command{
@@ -46,9 +49,29 @@ func NewTelemetryCmd() *cobra.Command {
 			fmt.Fprintf(out, "Valor Real da Hora (VRH): R$ %.2f / h\n", res.VRH)
 			fmt.Fprintf(out, "Indice de Desperdicio (IDT): %.2f%%\n", res.IDT)
 
+			var history []float64
+
+			if !noSave {
+				db, err := storage.OpenDB(dbPath)
+				if err == nil {
+					defer db.Close()
+					repo := storage.NewRepository(db)
+
+					// Busca historico anterior antes de salvar o ciclo atual
+					prevHistory, errPrev := repo.GetRecentIDTHistory(2)
+					if errPrev == nil {
+						history = append(history, prevHistory...)
+					}
+
+					if _, errSave := repo.SaveTelemetry(input, res); errSave == nil {
+						fmt.Fprintf(out, "[Storage] Ciclo registrado no SQLite com sucesso.\n")
+					}
+				}
+			}
+
 			if idtHistoryStr != "" {
 				parts := strings.Split(idtHistoryStr, ",")
-				var history []float64
+				history = nil
 				for _, p := range parts {
 					v, err := strconv.ParseFloat(strings.TrimSpace(p), 64)
 					if err != nil {
@@ -56,19 +79,19 @@ func NewTelemetryCmd() *cobra.Command {
 					}
 					history = append(history, v)
 				}
-				// Inclui o IDT atual no final do historico se solicitado
-				history = append(history, res.IDT)
-				idt3, err := p2t.CalculateIDT3(history)
-				if err != nil {
-					fmt.Fprintf(out, "Média Móvel (IDT3): Historico insuficiente (%v)\n", err)
-				} else {
-					zone, desc := p2t.EvaluateIDTZone(idt3)
-					fmt.Fprintf(out, "Média Móvel (IDT3): %.2f%%\n", idt3)
-					fmt.Fprintf(out, "Matriz de Decisao: [%s] %s\n", zone, desc)
-				}
-			} else {
+			}
+
+			// Inclui o IDT atual no historico para calculo da media movel
+			history = append(history, res.IDT)
+
+			idt3, err := p2t.CalculateIDT3(history)
+			if err != nil {
 				zone, desc := p2t.EvaluateIDTZone(res.IDT)
 				fmt.Fprintf(out, "Matriz de Decisao (Ciclo Atual): [%s] %s\n", zone, desc)
+			} else {
+				zone, desc := p2t.EvaluateIDTZone(idt3)
+				fmt.Fprintf(out, "Média Móvel (IDT3): %.2f%%\n", idt3)
+				fmt.Fprintf(out, "Matriz de Decisao: [%s] %s\n", zone, desc)
 			}
 
 			return nil
@@ -82,6 +105,8 @@ func NewTelemetryCmd() *cobra.Command {
 	cmd.Flags().Float64VarP(&contractHours, "contract-hours", "H", 0, "Horas Mensais Contratuais (HC)")
 	cmd.Flags().Float64VarP(&commuteHours, "commute-hours", "d", 0, "Horas Mensais de Deslocamento (HD)")
 	cmd.Flags().StringVarP(&idtHistoryStr, "idt-history", "i", "", "Historico de IDTs anteriores separados por virgula (ex: 8.5,9.0)")
+	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
+	cmd.Flags().BoolVar(&noSave, "no-save", false, "Nao salvar este registro no banco de dados SQLite")
 
 	_ = cmd.MarkFlagRequired("gross-salary")
 	_ = cmd.MarkFlagRequired("contract-hours")

@@ -31,6 +31,7 @@ func TestTelemetryCmd_Success(t *testing.T) {
 	rootCmd.SetOut(buf)
 	rootCmd.SetArgs([]string{
 		"telemetry",
+		"--no-save",
 		"-s", "5000",
 		"-f", "800",
 		"-e", "200",
@@ -62,6 +63,7 @@ func TestBufferCmd_Success(t *testing.T) {
 	rootCmd.SetOut(buf)
 	rootCmd.SetArgs([]string{
 		"buffer",
+		"--no-save",
 		"-t", "300",
 		"-r", "180",
 		"-p", "100,120,140",

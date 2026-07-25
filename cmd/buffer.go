@@ -6,15 +6,18 @@ import (
 	"strings"
 
 	"github.com/Wather17/p2t/pkg/p2t"
+	"github.com/Wather17/p2t/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
 // NewBufferCmd cria o comando de gestao do Buffer Operacional (A Caixinha).
 func NewBufferCmd() *cobra.Command {
 	var (
-		cap              float64
-		remainingBalance float64
+		cap               float64
+		remainingBalance  float64
 		replenishmentsStr string
+		dbPath            string
+		noSave            bool
 	)
 
 	cmd := &cobra.Command{
@@ -39,7 +42,27 @@ func NewBufferCmd() *cobra.Command {
 			fmt.Fprintf(out, "Custo Invisivel do Ciclo (CI / Rt): R$ %.2f\n", ci)
 
 			var replenishments []float64
+
+			if !noSave {
+				db, err := storage.OpenDB(dbPath)
+				if err == nil {
+					defer db.Close()
+					repo := storage.NewRepository(db)
+
+					// Busca historico anterior antes de salvar
+					prevRepl, errPrev := repo.GetRecentReplenishments(5)
+					if errPrev == nil {
+						replenishments = append(replenishments, prevRepl...)
+					}
+
+					if _, errSave := repo.SaveBufferCycle(cap, remainingBalance, ci); errSave == nil {
+						fmt.Fprintf(out, "[Storage] Registro de buffer salvo no SQLite com sucesso.\n")
+					}
+				}
+			}
+
 			if replenishmentsStr != "" {
+				replenishments = nil
 				parts := strings.Split(replenishmentsStr, ",")
 				for _, p := range parts {
 					v, err := strconv.ParseFloat(strings.TrimSpace(p), 64)
@@ -48,8 +71,11 @@ func NewBufferCmd() *cobra.Command {
 					}
 					replenishments = append(replenishments, v)
 				}
-			} else {
+			} else if len(replenishments) == 0 {
 				replenishments = []float64{ci}
+			} else {
+				// Inclui o custo invisivel atual no historico
+				replenishments = append(replenishments, ci)
 			}
 
 			metrics, err := p2t.CalculateBufferMetrics(cap, replenishments)
@@ -69,6 +95,8 @@ func NewBufferCmd() *cobra.Command {
 	cmd.Flags().Float64VarP(&cap, "cap", "t", 0, "Teto fixo de liquidez alocado para o trabalho (T)")
 	cmd.Flags().Float64VarP(&remainingBalance, "remaining", "r", 0, "Saldo nao utilizado retido ao final do ciclo (S_rem)")
 	cmd.Flags().StringVarP(&replenishmentsStr, "replenishments", "p", "", "Historico de valores de reposicao separados por virgula (ex: 120,150,110)")
+	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
+	cmd.Flags().BoolVar(&noSave, "no-save", false, "Nao salvar este registro no banco de dados SQLite")
 
 	_ = cmd.MarkFlagRequired("cap")
 
