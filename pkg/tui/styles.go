@@ -4,40 +4,58 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Estilos de UI do p2t usando Lip Gloss com visual moderno e sofisticado
+// Tokens da nova Identidade Visual do p2t (Matematica + Dinheiro + Telemetria)
 var (
-	PrimaryColor   = lipgloss.Color("#7D56F4") // Violeta elegante
-	SecondaryColor = lipgloss.Color("#04B575") // Verde esmeralda
-	AccentColor    = lipgloss.Color("#FF7675") // Coral suave
-	MutedColor     = lipgloss.Color("#6272A4") // Azul acinzentado
+	CyanPrimary    = lipgloss.Color("#00F2FE") // Ciano Eletrico (Matematica / Telemetria)
+	GreenSecondary = lipgloss.Color("#00E676") // Verde Esmeralda (Dinheiro / Liquidez Real)
+	CyberPurple    = lipgloss.Color("#7D56F4") // Roxo Cyber (Titulos & Destaque)
+	MutedGray      = lipgloss.Color("#6272A4") // Cinza Slate (Textos Secundarios)
+	DarkBg         = lipgloss.Color("#12131C") // Fundo Dark Contrastado
 
-	GreenZoneColor  = lipgloss.Color("#50FA7B")
-	YellowZoneColor = lipgloss.Color("#F1FA8C")
-	RedZoneColor    = lipgloss.Color("#FF5555")
+	GreenZoneColor  = lipgloss.Color("#50FA7B") // Neon Green
+	YellowZoneColor = lipgloss.Color("#FFB800") // Ambar Ouro
+	RedZoneColor    = lipgloss.Color("#FF3366") // Crimson Neon
 
 	AppTitleStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(PrimaryColor).
+			Background(CyberPurple).
 			Padding(0, 2).
+			MarginBottom(1)
+
+	LogoStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(CyanPrimary).
 			MarginBottom(1)
 
 	TabStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(MutedColor).
+			BorderForeground(MutedGray).
 			Padding(0, 2).
 			MarginRight(1)
 
 	ActiveTabStyle = TabStyle.Copy().
-			BorderForeground(PrimaryColor).
-			Foreground(PrimaryColor).
+			BorderForeground(CyanPrimary).
+			Foreground(CyanPrimary).
 			Bold(true)
 
 	CardStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(MutedColor).
+			BorderForeground(CyberPurple).
 			Padding(1, 2).
 			MarginBottom(1)
+
+	MetricLabelStyle = lipgloss.NewStyle().
+				Foreground(MutedGray).
+				Bold(true)
+
+	MetricMoneyStyle = lipgloss.NewStyle().
+				Foreground(GreenSecondary).
+				Bold(true)
+
+	MetricMathStyle = lipgloss.NewStyle().
+				Foreground(CyanPrimary).
+				Bold(true)
 
 	BadgeGreenStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -58,6 +76,6 @@ var (
 			Padding(0, 1)
 
 	HelpStyle = lipgloss.NewStyle().
-			Foreground(MutedColor).
+			Foreground(MutedGray).
 			MarginTop(1)
 )

@@ -350,12 +350,12 @@ func (m MainModel) View() string {
 func (m MainModel) viewTelemetryTab() string {
 	var b strings.Builder
 
-	b.WriteString("--- Formulário de Entrada ---\n")
-	b.WriteString(fmt.Sprintf("Salário Bruto (SB):     %s\n", m.inputSalary.View()))
-	b.WriteString(fmt.Sprintf("Horas Contratuais (HC): %s\n", m.inputContract.View()))
-	b.WriteString(fmt.Sprintf("Horas Deslocamento (HD):%s\n", m.inputCommute.View()))
+	b.WriteString(MetricLabelStyle.Render("--- Formulário de Telemetria de Retorno ---") + "\n")
+	b.WriteString(fmt.Sprintf("Salário Bruto (SB):      %s\n", m.inputSalary.View()))
+	b.WriteString(fmt.Sprintf("Horas Contratuais (HC):  %s\n", m.inputContract.View()))
+	b.WriteString(fmt.Sprintf("Horas Deslocamento (HD): %s\n", m.inputCommute.View()))
 	b.WriteString(fmt.Sprintf("Descontos por Erros (DE):%s\n", m.inputErrors.View()))
-	b.WriteString(fmt.Sprintf("Custos Invisíveis (CI): %s\n", m.inputCosts.View()))
+	b.WriteString(fmt.Sprintf("Custos Invisíveis (CI):  %s\n", m.inputCosts.View()))
 
 	if m.telemetryResult != nil {
 		res := m.telemetryResult
@@ -372,8 +372,12 @@ func (m MainModel) viewTelemetryTab() string {
 		}
 
 		card := fmt.Sprintf(
-			"Horas Totais (HT): %.2f h\nLiquidez Real (SL): R$ %.2f\nValor Real Hora (VRH): R$ %.2f/h\nDesperdício (IDT): %.2f%%\nDecisão: %s - %s",
-			res.TotalHours, res.RealLiquidity, res.VRH, res.IDT, badge, desc,
+			"%s: %.2f h\n%s: %s\n%s: %s\n%s: %.2f%%\n%s: %s - %s",
+			MetricLabelStyle.Render("Carga Horária Total (HT)"), res.TotalHours,
+			MetricLabelStyle.Render("Liquidez Real (SL)"), MetricMoneyStyle.Render(fmt.Sprintf("R$ %.2f", res.RealLiquidity)),
+			MetricLabelStyle.Render("Valor Real da Hora (VRH)"), MetricMathStyle.Render(fmt.Sprintf("R$ %.2f / h", res.VRH)),
+			MetricLabelStyle.Render("Índice de Desperdício (IDT)"), res.IDT,
+			MetricLabelStyle.Render("Matriz de Decisão"), badge, desc,
 		)
 		b.WriteString("\n" + CardStyle.Render(card))
 	}
@@ -384,15 +388,17 @@ func (m MainModel) viewTelemetryTab() string {
 func (m MainModel) viewBufferTab() string {
 	var b strings.Builder
 
-	b.WriteString("--- Gestão do Buffer (A Caixinha) ---\n")
-	b.WriteString(fmt.Sprintf("Teto Alocado (T):      %s\n", m.inputCap.View()))
+	b.WriteString(MetricLabelStyle.Render("--- Gestão do Buffer Operacional (A Caixinha) ---") + "\n")
+	b.WriteString(fmt.Sprintf("Teto Alocado (T):           %s\n", m.inputCap.View()))
 	b.WriteString(fmt.Sprintf("Saldo Remanescente (S_rem): %s\n", m.inputRemaining.View()))
 
 	if m.bufferMetrics != nil {
 		diag, desc := p2t.DiagnoseEfficiency(m.bufferMetrics.TCM)
 		card := fmt.Sprintf(
-			"Média Reposição (R_bar): R$ %.2f\nTaxa Consumo (TCM): %.2f%%\nDiagnóstico: [%s] %s",
-			m.bufferMetrics.AverageReplenishment, m.bufferMetrics.TCM, diag, desc,
+			"%s: %s\n%s: %.2f%%\n%s: [%s] %s",
+			MetricLabelStyle.Render("Média Móvel Reposição (R_bar)"), MetricMoneyStyle.Render(fmt.Sprintf("R$ %.2f", m.bufferMetrics.AverageReplenishment)),
+			MetricLabelStyle.Render("Taxa de Consumo Média (TCM)"), m.bufferMetrics.TCM,
+			MetricLabelStyle.Render("Diagnóstico de Eficiência"), diag, desc,
 		)
 		b.WriteString("\n" + CardStyle.Render(card))
 	}
@@ -402,7 +408,7 @@ func (m MainModel) viewBufferTab() string {
 
 func (m MainModel) viewHistoryTab() string {
 	var b strings.Builder
-	b.WriteString("--- Registros Recentes (SQLite) ---\n")
+	b.WriteString(MetricLabelStyle.Render("--- Registros Recentes (SQLite) ---") + "\n")
 	b.WriteString(m.historyTable.View())
 	return b.String()
 }
