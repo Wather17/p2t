@@ -1,0 +1,66 @@
+package storage
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	_ "modernc.org/sqlite"
+)
+
+// OpenDB abre ou cria uma conexao com o banco SQLite no caminho fornecido (ou em memoria se path == ":memory:").
+func OpenDB(dbPath string) (*sql.DB, error) {
+	if dbPath == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("falha ao obter diretorio home do usuario: %w", err)
+		}
+		dir := filepath.Join(home, ".p2t")
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("falha ao criar diretorio de dados: %w", err)
+		}
+		dbPath = filepath.Join(dir, "p2t.db")
+	}
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao abrir banco sqlite em %s: %w", dbPath, err)
+	}
+
+	if err := migrate(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("falha na migracao do banco de dados: %w", err)
+	}
+
+	return db, nil
+}
+
+func migrate(db *sql.DB) error {
+	schema := `
+	CREATE TABLE IF NOT EXISTS telemetry_cycles (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		gross_salary REAL NOT NULL,
+		fixed_deductions REAL NOT NULL,
+		error_deductions REAL NOT NULL,
+		invisible_costs REAL NOT NULL,
+		contract_hours REAL NOT NULL,
+		commute_hours REAL NOT NULL,
+		total_hours REAL NOT NULL,
+		real_liquidity REAL NOT NULL,
+		vrh REAL NOT NULL,
+		idt REAL NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS buffer_cycles (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		cap REAL NOT NULL,
+		remaining_balance REAL NOT NULL,
+		invisible_cost REAL NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	_, err := db.Exec(schema)
+	return err
+}
