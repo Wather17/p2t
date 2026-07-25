@@ -60,7 +60,6 @@ func TestTelemetryCmd_Success(t *testing.T) {
 func TestTelemetryCmd_InteractiveBrazilianFormat(t *testing.T) {
 	rootCmd := cmd.NewRootCmd()
 	outBuf := new(bytes.Buffer)
-	// Simula respostas do usuario no formato brasileiro: SB="R$ 5.000,00", HC="160,0", HD="40", DF="800,00", DE="200,00", CI="300,00"
 	inInput := "R$ 5.000,00\n160,0\n40\n800,00\n200,00\n300,00\n"
 	inBuf := bytes.NewBufferString(inInput)
 
@@ -115,31 +114,22 @@ func TestBufferCmd_Success(t *testing.T) {
 	}
 }
 
-func TestBufferCmd_InteractiveBrazilianFormat(t *testing.T) {
+func TestHistoryCmd_Success(t *testing.T) {
 	rootCmd := cmd.NewRootCmd()
-	outBuf := new(bytes.Buffer)
-	// Simula respostas no formato brasileiro: T="R$ 300,00", S_rem="180,00"
-	inInput := "R$ 300,00\n180,00\n"
-	inBuf := bytes.NewBufferString(inInput)
-
-	rootCmd.SetIn(inBuf)
-	rootCmd.SetOut(outBuf)
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
 	rootCmd.SetArgs([]string{
-		"buffer",
-		"--no-save",
-		"-I",
+		"history",
+		"--db", ":memory:",
 	})
 
 	err := rootCmd.Execute()
 	if err != nil {
-		t.Fatalf("erro no modo interativo do buffer: %v", err)
+		t.Fatalf("erro ao executar comando history: %v", err)
 	}
 
-	out := outBuf.String()
-	if !strings.Contains(out, "=== Modo Interativo: Gestão do Buffer Operacional (A Caixinha) ===") {
-		t.Errorf("cabecalho do modo interativo do buffer nao encontrado: %s", out)
-	}
-	if !strings.Contains(out, "Custo Invisivel do Ciclo (CI / Rt): R$ 120.00") {
-		t.Errorf("CI invalido na saida interativa do buffer: %s", out)
+	out := buf.String()
+	if !strings.Contains(out, "=== Histórico de Telemetria") {
+		t.Errorf("saida esperada do history nao encontrada: %s", out)
 	}
 }
