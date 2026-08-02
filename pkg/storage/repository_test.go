@@ -174,3 +174,55 @@ func TestRepository_GetTelemetryAnalytics(t *testing.T) {
 	}
 }
 
+func TestRepository_DeleteAndUpdate(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+
+	input := p2t.TelemetryInput{
+		GrossSalary:     5000.0,
+		FixedDeductions: 800.0,
+		ErrorDeductions: 0.0,
+		InvisibleCosts:  100.0,
+		ContractHours:   160.0,
+		CommuteHours:    30.0,
+	}
+	res, _ := p2t.CalculateTelemetry(input)
+
+	id, err := repo.SaveTelemetry(input, res, "2026-05")
+	if err != nil {
+		t.Fatalf("falha ao salvar registro: %v", err)
+	}
+
+	// Testar atualizacao
+	input.GrossSalary = 6000.0
+	resUpdated, _ := p2t.CalculateTelemetry(input)
+	err = repo.UpdateTelemetryRecord(id, input, resUpdated, "2026-05")
+	if err != nil {
+		t.Fatalf("falha ao atualizar registro #%d: %v", id, err)
+	}
+
+	latest, _ := repo.GetLatestTelemetryRecord()
+	if !almostEqual(latest.GrossSalary, 6000.0) {
+		t.Errorf("esperado salario atualizado=6000.0, obtido=%.2f", latest.GrossSalary)
+	}
+
+	// Testar exclusao de telemetria
+	err = repo.DeleteTelemetryRecord(id)
+	if err != nil {
+		t.Fatalf("falha ao excluir registro #%d: %v", id, err)
+	}
+
+	// Testar exclusao de buffer
+	bufID, _ := repo.SaveBufferCycle(300.0, 150.0, 150.0)
+	err = repo.DeleteBufferRecord(bufID)
+	if err != nil {
+		t.Fatalf("falha ao excluir registro de buffer #%d: %v", bufID, err)
+	}
+}
+
+
