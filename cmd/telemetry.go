@@ -26,6 +26,8 @@ func NewTelemetryCmd() *cobra.Command {
 		noSave          bool
 		interactive     bool
 		referenceMonth  string
+		workSchedule    string
+		dailyCommute    float64
 	)
 
 	cmd := &cobra.Command{
@@ -37,6 +39,14 @@ func NewTelemetryCmd() *cobra.Command {
 
 			if referenceMonth == "" {
 				referenceMonth = time.Now().AddDate(0, -1, 0).Format("2006-01")
+			}
+
+			if workSchedule != "" && dailyCommute > 0 {
+				computedHD, err := p2t.CalculateCommuteHours(p2t.WorkSchedule(workSchedule), dailyCommute)
+				if err != nil {
+					return err
+				}
+				commuteHours = computedHD
 			}
 
 			// Se a flag interactive for explicitamente usada ou se os valores obrigatorios forem omissos
@@ -51,8 +61,10 @@ func NewTelemetryCmd() *cobra.Command {
 				if contractHours, err = PromptFloat(scanner, out, "Carga Horária Mensal Contratual (HC em horas)", contractHours); err != nil {
 					return err
 				}
-				if commuteHours, err = PromptFloat(scanner, out, "Horas Mensais gastas exclusivamente em Deslocamento (HD)", commuteHours); err != nil {
-					return err
+				if commuteHours <= 0 {
+					if commuteHours, err = PromptFloat(scanner, out, "Horas Mensais gastas exclusivamente em Deslocamento (HD)", commuteHours); err != nil {
+						return err
+					}
 				}
 
 				// Calcula estimativa automatica de descontos legais se nao especificado
@@ -95,6 +107,9 @@ func NewTelemetryCmd() *cobra.Command {
 
 			fmt.Fprintf(out, "=== Telemetria de Retorno de Tempo (p2t) ===\n")
 			fmt.Fprintf(out, "Mês de Competência: %s\n", referenceMonth)
+			if workSchedule != "" {
+				fmt.Fprintf(out, "Escala de Trabalho: %s (HD calculado: %.2f h/mês)\n", workSchedule, commuteHours)
+			}
 			fmt.Fprintf(out, "Carga Horaria Total (HT): %.2f h\n", res.TotalHours)
 			fmt.Fprintf(out, "Descontos Legais Aplicados (DF): R$ %.2f\n", fixedDeductions)
 			fmt.Fprintf(out, "Liquidez Real (SL): R$ %.2f\n", res.RealLiquidity)
@@ -158,6 +173,8 @@ func NewTelemetryCmd() *cobra.Command {
 	cmd.Flags().Float64VarP(&invisibleCosts, "invisible-costs", "c", 0, "Custos Invisiveis de Permanencia (CI)")
 	cmd.Flags().Float64VarP(&contractHours, "contract-hours", "H", 0, "Horas Mensais Contratuais (HC)")
 	cmd.Flags().Float64VarP(&commuteHours, "commute-hours", "d", 0, "Horas Mensais de Deslocamento (HD)")
+	cmd.Flags().StringVarP(&workSchedule, "schedule", "W", "", "Escala de trabalho presencial (5x2, 6x1, 12x36, 4x3)")
+	cmd.Flags().Float64VarP(&dailyCommute, "daily-commute", "D", 0, "Horas diarias de deslocamento (ida + volta) para calculo via escala")
 	cmd.Flags().StringVarP(&idtHistoryStr, "idt-history", "i", "", "Historico de IDTs anteriores separados por virgula (ex: 8.5,9.0)")
 	cmd.Flags().StringVarP(&referenceMonth, "reference-month", "m", "", "Mês de competência (formato YYYY-MM). Padrão: mês anterior.")
 	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
