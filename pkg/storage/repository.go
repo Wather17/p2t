@@ -272,3 +272,56 @@ func (r *Repository) GetTelemetryAnalytics() (TelemetryAnalytics, error) {
 	return analytics, nil
 }
 
+// DeleteTelemetryRecord remove um registro de telemetria pelo ID.
+func (r *Repository) DeleteTelemetryRecord(id int64) error {
+	query := `DELETE FROM telemetry_cycles WHERE id = ?;`
+	res, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("falha ao excluir registro de telemetria #%d: %w", id, err)
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("registro de telemetria #%d nao encontrado", id)
+	}
+	return nil
+}
+
+// UpdateTelemetryRecord atualiza um registro de telemetria existente pelo ID.
+func (r *Repository) UpdateTelemetryRecord(id int64, input p2t.TelemetryInput, res p2t.TelemetryResult, referenceMonth string) error {
+	query := `
+	UPDATE telemetry_cycles
+	SET gross_salary = ?, fixed_deductions = ?, error_deductions = ?, invisible_costs = ?,
+	    contract_hours = ?, commute_hours = ?, total_hours = ?, real_liquidity = ?,
+	    vrh = ?, idt = ?, reference_month = ?
+	WHERE id = ?;
+	`
+	result, err := r.db.Exec(query,
+		input.GrossSalary, input.FixedDeductions, input.ErrorDeductions, input.InvisibleCosts,
+		input.ContractHours, input.CommuteHours, res.TotalHours, res.RealLiquidity,
+		res.VRH, res.IDT, referenceMonth, id,
+	)
+	if err != nil {
+		return fmt.Errorf("falha ao atualizar registro de telemetria #%d: %w", id, err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("registro de telemetria #%d nao encontrado", id)
+	}
+	return nil
+}
+
+// DeleteBufferRecord remove um registro de ciclo de buffer pelo ID.
+func (r *Repository) DeleteBufferRecord(id int64) error {
+	query := `DELETE FROM buffer_cycles WHERE id = ?;`
+	res, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("falha ao excluir ciclo de buffer #%d: %w", id, err)
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("ciclo de buffer #%d nao encontrado", id)
+	}
+	return nil
+}
+
+
