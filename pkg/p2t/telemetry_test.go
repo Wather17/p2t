@@ -133,3 +133,39 @@ func TestEvaluateIDTZone(t *testing.T) {
 		}
 	}
 }
+
+func TestCalculateCommuteHours(t *testing.T) {
+	tests := []struct {
+		name          string
+		schedule      p2t.WorkSchedule
+		dailyHours    float64
+		expectedHours float64
+		expectErr     bool
+	}{
+		{"5x2 com 1.5h/dia", p2t.Schedule5x2, 1.5, 33.0, false},
+		{"6x1 com 1.5h/dia", p2t.Schedule6x1, 1.5, 39.0, false},
+		{"12x36 com 1.5h/dia", p2t.Schedule12x36, 1.5, 22.5, false},
+		{"4x3 com 2.0h/dia", p2t.Schedule4x3, 2.0, 34.0, false},
+		{"Horas Negativas", p2t.Schedule5x2, -1.0, 0, true},
+		{"Escala Invalida", p2t.WorkSchedule("99x99"), 1.0, 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, err := p2t.CalculateCommuteHours(tt.schedule, tt.dailyHours)
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("esperado erro para %s, obtido nil", tt.name)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("erro inesperado para %s: %v", tt.name, err)
+				}
+				if !almostEqual(h, tt.expectedHours) {
+					t.Errorf("esperado %.2f h, obtido %.2f h", tt.expectedHours, h)
+				}
+			}
+		})
+	}
+}
+

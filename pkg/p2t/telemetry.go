@@ -14,6 +14,39 @@ const (
 	ZoneRed    IDTZone = "Zona Vermelha"
 )
 
+// WorkSchedule representa o tipo de escala de trabalho presencial.
+type WorkSchedule string
+
+const (
+	Schedule5x2  WorkSchedule = "5x2"
+	Schedule6x1  WorkSchedule = "6x1"
+	Schedule12x36 WorkSchedule = "12x36"
+	Schedule4x3  WorkSchedule = "4x3"
+)
+
+// CalculateCommuteHours calcula o total de horas mensais de deslocamento (HD) com base na escala e horas diarias de trânsito.
+func CalculateCommuteHours(schedule WorkSchedule, dailyCommuteHours float64) (float64, error) {
+	if dailyCommuteHours < 0 {
+		return 0, errors.New("horas de deslocamento diario nao podem ser negativas")
+	}
+
+	var monthlyDays float64
+	switch schedule {
+	case Schedule5x2:
+		monthlyDays = 22.0
+	case Schedule6x1:
+		monthlyDays = 26.0
+	case Schedule12x36:
+		monthlyDays = 15.0
+	case Schedule4x3:
+		monthlyDays = 17.0
+	default:
+		return 0, fmt.Errorf("escala de trabalho invalida ou nao suportada: '%s'", schedule)
+	}
+
+	return RoundPercentage(monthlyDays * dailyCommuteHours), nil
+}
+
 // TelemetryInput engloba as variaveis de um ciclo mensal para telemetria de tempo e retorno.
 type TelemetryInput struct {
 	GrossSalary     float64 // SB: Salario Bruto
