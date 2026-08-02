@@ -199,3 +199,76 @@ func (r *Repository) GetRecentReplenishments(limit int) ([]float64, error) {
 	}
 	return list, rows.Err()
 }
+
+// TelemetryAnalytics agrega métricas estatísticas do histórico.
+type TelemetryAnalytics struct {
+	IDT3                      float64
+	IDT6                      float64
+	IDT12                     float64
+	VRHTrendPercent           float64
+	TotalAnnualInvisibleCosts float64
+	TotalRecords              int
+}
+
+// GetTelemetryAnalytics calcula estatisticas agregadas dos ciclos de telemetria armazenados.
+func (r *Repository) GetTelemetryAnalytics() (TelemetryAnalytics, error) {
+	var analytics TelemetryAnalytics
+
+	records, err := r.GetRecentTelemetryRecords(12)
+	if err != nil {
+		return analytics, err
+	}
+
+	analytics.TotalRecords = len(records)
+	if analytics.TotalRecords == 0 {
+		return analytics, nil
+	}
+
+	// Calcula medias moveis de IDT
+	var sum3, sum6, sum12 float64
+	n := len(records)
+
+	for i, rec := range records {
+		if i >= n-3 {
+			sum3 += rec.IDT
+		}
+		if i >= n-6 {
+			sum6 += rec.IDT
+		}
+		sum12 += rec.IDT
+	}
+
+	if n >= 3 {
+		analytics.IDT3 = p2t.RoundPercentage(sum3 / 3.0)
+	} else {
+		analytics.IDT3 = p2t.RoundPercentage(sum3 / float64(n))
+	}
+
+	count6 := 6
+	if n < 6 {
+		count6 = n
+	}
+	analytics.IDT6 = p2t.RoundPercentage(sum6 / float64(count6))
+
+	analytics.IDT12 = p2t.RoundPercentage(sum12 / float64(n))
+
+	// Calcula tendencia do VRH (comparando o ultimo com a media anterior)
+	if n >= 2 {
+		lastVRH := records[n-1].VRH
+		prevVRH := records[n-2].VRH
+		if prevVRH > 0 {
+			analytics.VRHTrendPercent = p2t.RoundPercentage(((lastVRH - prevVRH) / prevVRH) * 100.0)
+		}
+	}
+
+	// Soma de custos invisiveis
+	querySum := `SELECT COALESCE(SUM(invisible_costs), 0) FROM telemetry_cycles;`
+	err = r.db.QueryRow(querySum).Scan(&analytics.TotalAnnualInvisibleCosts)
+	if err != nil {
+		return analytics, fmt.Errorf("falha ao calcular total de custos invisiveis: %w", err)
+	}
+	analytics.TotalAnnualInvisibleCosts = p2t.RoundCurrency(analytics.TotalAnnualInvisibleCosts)
+
+	return analytics, nil
+}
+
