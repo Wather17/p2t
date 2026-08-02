@@ -3,6 +3,7 @@ package p2t_test
 import (
 	"math"
 	"testing"
+	"time"
 
 	"github.com/Wather17/p2t/pkg/p2t"
 )
@@ -168,4 +169,37 @@ func TestCalculateCommuteHours(t *testing.T) {
 		})
 	}
 }
+
+func TestCalculateExactShifts(t *testing.T) {
+	// Em Julho/2026 (31 dias): 1/Jul eh quarta-feira.
+	// Se refDate = 01/Jul/2026 (plantao no dia 1): plantoes nos dias 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31 = 16 plantoes.
+	refDate1 := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	shifts16, err := p2t.CalculateExactShifts(p2t.Schedule12x36, refDate1, "2026-07")
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if shifts16 != 16 {
+		t.Errorf("esperado 16 plantoes em julho começando no dia 1, obtido: %d", shifts16)
+	}
+
+	// Se refDate = 02/Jul/2026 (folga no dia 1, plantao no dia 2): plantoes nos dias 2, 4, 6... 30 = 15 plantoes.
+	refDate2 := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
+	shifts15, err := p2t.CalculateExactShifts(p2t.Schedule12x36, refDate2, "2026-07")
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if shifts15 != 15 {
+		t.Errorf("esperado 15 plantoes em julho começando no dia 2, obtido: %d", shifts15)
+	}
+
+	// Testar CalculateCommuteHoursWithRefDate
+	commuteHours, count, err := p2t.CalculateCommuteHoursWithRefDate(p2t.Schedule12x36, 2.0, refDate1, "2026-07")
+	if err != nil {
+		t.Fatalf("erro no calculo de commute com refDate: %v", err)
+	}
+	if count != 16 || !almostEqual(commuteHours, 32.0) {
+		t.Errorf("esperado 16 plantoes e 32.0h, obtido %d plantoes e %.2fh", count, commuteHours)
+	}
+}
+
 
