@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type activeTab int
@@ -75,6 +76,17 @@ func NewMainModel(db *sql.DB) MainModel {
 	m.inputCosts = textinput.New()
 	m.inputCosts.Placeholder = "ex: 200,00"
 
+	// Tenta auto-preencher inputs com o registro mais recente do banco
+	if repo != nil {
+		if latest, err := repo.GetLatestTelemetryRecord(); err == nil && latest != nil {
+			m.inputSalary.SetValue(fmt.Sprintf("%.2f", latest.GrossSalary))
+			m.inputContract.SetValue(fmt.Sprintf("%.0f", latest.ContractHours))
+			m.inputCommute.SetValue(fmt.Sprintf("%.0f", latest.CommuteHours))
+			m.inputErrors.SetValue(fmt.Sprintf("%.2f", latest.ErrorDeductions))
+			m.inputCosts.SetValue(fmt.Sprintf("%.2f", latest.InvisibleCosts))
+		}
+	}
+
 	// Inicializa inputs do Buffer
 	m.inputCap = textinput.New()
 	m.inputCap.Placeholder = "ex: 300,00"
@@ -90,24 +102,25 @@ func NewMainModel(db *sql.DB) MainModel {
 
 func (m *MainModel) initHistoryTable() {
 	columns := []table.Column{
-		{Title: "ID", Width: 4},
+		{Title: "ID", Width: 5},
 		{Title: "Data", Width: 12},
-		{Title: "Bruto (SB)", Width: 12},
-		{Title: "VRH", Width: 12},
-		{Title: "IDT", Width: 10},
+		{Title: "Bruto (SB)", Width: 14},
+		{Title: "VRH", Width: 14},
+		{Title: "IDT (%)", Width: 10},
 	}
 
 	var rows []table.Row
 	if m.repo != nil {
-		history, err := m.repo.GetRecentIDTHistory(10)
+		records, err := m.repo.GetRecentTelemetryRecords(15)
 		if err == nil {
-			for i, idt := range history {
+			for _, rec := range records {
+				dateStr := rec.CreatedAt.Format("2006-01-02")
 				rows = append(rows, table.Row{
-					fmt.Sprintf("%d", i+1),
-					"Recente",
-					"-",
-					"-",
-					fmt.Sprintf("%.2f%%", idt),
+					fmt.Sprintf("%d", rec.ID),
+					dateStr,
+					fmt.Sprintf("R$ %.2f", rec.GrossSalary),
+					fmt.Sprintf("R$ %.2f/h", rec.VRH),
+					fmt.Sprintf("%.2f%%", rec.IDT),
 				})
 			}
 		}
@@ -117,7 +130,7 @@ func (m *MainModel) initHistoryTable() {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(7),
+		table.WithHeight(8),
 	)
 	m.historyTable = t
 }
@@ -139,6 +152,15 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "1":
+			m.activeTab = tabTelemetry
+			return m, nil
+		case "2":
+			m.activeTab = tabBuffer
+			return m, nil
+		case "3":
+			m.activeTab = tabHistory
+			return m, nil
 		case "tab":
 			m.activeTab = (m.activeTab + 1) % 3
 			return m, nil
@@ -272,7 +294,7 @@ func (m *MainModel) calculateCurrentTab() {
 		}
 
 		m.telemetryResult = &res
-		m.statusMsg = "Telemetria calculada com sucesso!"
+		m.statusMsg = "Telemetria calculada e salva com sucesso!"
 
 		if m.repo != nil {
 			_, _ = m.repo.SaveTelemetry(input, res)
@@ -342,73 +364,109 @@ func (m MainModel) View() string {
 		b.WriteString("\n" + CardStyle.Render(m.statusMsg))
 	}
 
-	b.WriteString(HelpStyle.Render("[Tab/Shift+Tab] Navegar Abas  |  [Seta Cima/Baixo] Mudar Campo  |  [Enter] Calcular  |  [q] Sair"))
+	b.WriteString(HelpStyle.Render("[1/2/3] Mudar Aba  |  [Tab/Shift+Tab] Navegar Abas  |  [Seta Cima/Baixo] Campo  |  [Enter] Calcular  |  [q] Sair"))
 
 	return b.String()
 }
 
 func (m MainModel) viewTelemetryTab() string {
-	var b strings.Builder
+	var formBuilder strings.Builder
+	formBuilder.WriteString(MetricLabelStyle.Render("--- Form Telemetria ---") + "\n")
+	formBuilder.WriteString(fmt.Sprintf("Salário Bruto (SB):      %s\n", m.inputSalary.View()))
+	formBuilder.WriteString(fmt.Sprintf("Horas Contratuais (HC):  %s\n", m.inputContract.View()))
+	formBuilder.WriteString(fmt.Sprintf("Horas Deslocamento (HD): %s\n", m.inputCommute.View()))
+	formBuilder.WriteString(fmt.Sprintf("Descontos Erros (DE):    %s\n", m.inputErrors.View()))
+	formBuilder.WriteString(fmt.Sprintf("Custos Invisíveis (CI):  %s\n", m.inputCosts.View()))
 
-	b.WriteString(MetricLabelStyle.Render("--- Formulário de Telemetria de Retorno ---") + "\n")
-	b.WriteString(fmt.Sprintf("Salário Bruto (SB):      %s\n", m.inputSalary.View()))
-	b.WriteString(fmt.Sprintf("Horas Contratuais (HC):  %s\n", m.inputContract.View()))
-	b.WriteString(fmt.Sprintf("Horas Deslocamento (HD): %s\n", m.inputCommute.View()))
-	b.WriteString(fmt.Sprintf("Descontos por Erros (DE):%s\n", m.inputErrors.View()))
-	b.WriteString(fmt.Sprintf("Custos Invisíveis (CI):  %s\n", m.inputCosts.View()))
+	formBox := FormBoxStyle.Render(formBuilder.String())
 
+	var resultBox string
 	if m.telemetryResult != nil {
 		res := m.telemetryResult
 		zone, desc := p2t.EvaluateIDTZone(res.IDT)
 
 		var badge string
+		var zoneColor = GreenZoneColor
 		switch zone {
 		case p2t.ZoneGreen:
 			badge = BadgeGreenStyle.Render(string(zone))
+			zoneColor = GreenZoneColor
 		case p2t.ZoneYellow:
 			badge = BadgeYellowStyle.Render(string(zone))
+			zoneColor = YellowZoneColor
 		default:
 			badge = BadgeRedStyle.Render(string(zone))
+			zoneColor = RedZoneColor
 		}
 
+		progressBar := RenderProgressBar(res.IDT*3.33, 24, zoneColor) // 30% max bar scale
+
 		card := fmt.Sprintf(
-			"%s: %.2f h\n%s: %s\n%s: %s\n%s: %.2f%%\n%s: %s - %s",
+			"%s\n%s: %.2f h\n%s: %s\n%s: %s\n\n%s: %.2f%%\n[%s]\n\n%s: %s\n%s",
+			MetricLabelStyle.Render("--- Resultados & Telemetria ---"),
 			MetricLabelStyle.Render("Carga Horária Total (HT)"), res.TotalHours,
 			MetricLabelStyle.Render("Liquidez Real (SL)"), MetricMoneyStyle.Render(fmt.Sprintf("R$ %.2f", res.RealLiquidity)),
-			MetricLabelStyle.Render("Valor Real da Hora (VRH)"), MetricMathStyle.Render(fmt.Sprintf("R$ %.2f / h", res.VRH)),
-			MetricLabelStyle.Render("Índice de Desperdício (IDT)"), res.IDT,
-			MetricLabelStyle.Render("Matriz de Decisão"), badge, desc,
+			MetricLabelStyle.Render("Valor Real Hora (VRH)"), MetricMathStyle.Render(fmt.Sprintf("R$ %.2f/h", res.VRH)),
+			MetricLabelStyle.Render("Índice Desperdício (IDT)"), res.IDT,
+			progressBar,
+			MetricLabelStyle.Render("Matriz de Decisão"), badge,
+			desc,
 		)
-		b.WriteString("\n" + CardStyle.Render(card))
+		resultBox = ResultBoxStyle.Render(card)
+	} else {
+		resultBox = ResultBoxStyle.Render(MetricLabelStyle.Render("Preencha os campos e pressione [Enter] para calcular."))
 	}
 
-	return b.String()
+	if m.width >= 80 {
+		return lipgloss.JoinHorizontal(lipgloss.Top, formBox, resultBox)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, formBox, resultBox)
 }
 
 func (m MainModel) viewBufferTab() string {
-	var b strings.Builder
+	var formBuilder strings.Builder
+	formBuilder.WriteString(MetricLabelStyle.Render("--- Gestão do Buffer Operacional ---") + "\n")
+	formBuilder.WriteString(fmt.Sprintf("Teto Alocado (T):           %s\n", m.inputCap.View()))
+	formBuilder.WriteString(fmt.Sprintf("Saldo Remanescente (S_rem): %s\n", m.inputRemaining.View()))
 
-	b.WriteString(MetricLabelStyle.Render("--- Gestão do Buffer Operacional (A Caixinha) ---") + "\n")
-	b.WriteString(fmt.Sprintf("Teto Alocado (T):           %s\n", m.inputCap.View()))
-	b.WriteString(fmt.Sprintf("Saldo Remanescente (S_rem): %s\n", m.inputRemaining.View()))
+	formBox := FormBoxStyle.Render(formBuilder.String())
 
+	var resultBox string
 	if m.bufferMetrics != nil {
 		diag, desc := p2t.DiagnoseEfficiency(m.bufferMetrics.TCM)
+		tcmColor := GreenZoneColor
+		if m.bufferMetrics.TCM > 50 {
+			tcmColor = YellowZoneColor
+		}
+		if m.bufferMetrics.TCM > 80 {
+			tcmColor = RedZoneColor
+		}
+		bar := RenderProgressBar(m.bufferMetrics.TCM, 24, tcmColor)
+
 		card := fmt.Sprintf(
-			"%s: %s\n%s: %.2f%%\n%s: [%s] %s",
-			MetricLabelStyle.Render("Média Móvel Reposição (R_bar)"), MetricMoneyStyle.Render(fmt.Sprintf("R$ %.2f", m.bufferMetrics.AverageReplenishment)),
-			MetricLabelStyle.Render("Taxa de Consumo Média (TCM)"), m.bufferMetrics.TCM,
-			MetricLabelStyle.Render("Diagnóstico de Eficiência"), diag, desc,
+			"%s\n%s: %s\n%s: %.2f%%\n[%s]\n\n%s: [%s]\n%s",
+			MetricLabelStyle.Render("--- Diagnóstico da Caixinha ---"),
+			MetricLabelStyle.Render("Média Reposição (R_bar)"), MetricMoneyStyle.Render(fmt.Sprintf("R$ %.2f", m.bufferMetrics.AverageReplenishment)),
+			MetricLabelStyle.Render("Taxa Consumo Média (TCM)"), m.bufferMetrics.TCM,
+			bar,
+			MetricLabelStyle.Render("Status"), diag,
+			desc,
 		)
-		b.WriteString("\n" + CardStyle.Render(card))
+		resultBox = ResultBoxStyle.Render(card)
+	} else {
+		resultBox = ResultBoxStyle.Render(MetricLabelStyle.Render("Preencha Teto e Saldo e pressione [Enter]."))
 	}
 
-	return b.String()
+	if m.width >= 80 {
+		return lipgloss.JoinHorizontal(lipgloss.Top, formBox, resultBox)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, formBox, resultBox)
 }
 
 func (m MainModel) viewHistoryTab() string {
 	var b strings.Builder
-	b.WriteString(MetricLabelStyle.Render("--- Registros Recentes (SQLite) ---") + "\n")
+	b.WriteString(MetricLabelStyle.Render("--- Histórico de Telemetria (SQLite) ---") + "\n\n")
 	b.WriteString(m.historyTable.View())
 	return b.String()
 }
+

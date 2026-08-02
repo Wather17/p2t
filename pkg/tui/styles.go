@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -78,4 +80,48 @@ var (
 	HelpStyle = lipgloss.NewStyle().
 			Foreground(MutedGray).
 			MarginTop(1)
+
+	FormBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(CyanPrimary).
+			Padding(1, 2).
+			MarginRight(2)
+
+	ResultBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(CyberPurple).
+			Padding(1, 2)
+
+	FieldFocusedStyle = lipgloss.NewStyle().
+				Foreground(CyanPrimary).
+				Bold(true)
+
+	FieldBlurStyle = lipgloss.NewStyle().
+			Foreground(MutedGray)
 )
+
+// RenderProgressBar gera uma barra de progresso em texto/lipgloss dada uma porcentagem (0-100%).
+func RenderProgressBar(percent float64, width int, zoneColor lipgloss.Color) string {
+	if width < 10 {
+		width = 20
+	}
+	if percent < 0 {
+		percent = 0
+	}
+	if percent > 100 {
+		percent = 100
+	}
+
+	filledLength := int((percent / 100.0) * float64(width))
+	if filledLength > width {
+		filledLength = width
+	}
+	emptyLength := width - filledLength
+
+	filledStyle := lipgloss.NewStyle().Foreground(zoneColor).Bold(true)
+	emptyStyle := lipgloss.NewStyle().Foreground(MutedGray)
+
+	bar := filledStyle.Render(strings.Repeat("█", filledLength)) + emptyStyle.Render(strings.Repeat("░", emptyLength))
+	return bar
+}
+
