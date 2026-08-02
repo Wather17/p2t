@@ -183,6 +183,20 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	} else if m.activeTab == tabBuffer {
 		m.updateBufferInputs(msg)
 	} else if m.activeTab == tabHistory {
+		if keyMsg, ok := msg.(tea.KeyMsg); ok && (keyMsg.String() == "d" || keyMsg.String() == "delete") {
+			selected := m.historyTable.SelectedRow()
+			if len(selected) > 0 && m.repo != nil {
+				var id int64
+				fmt.Sscanf(selected[0], "%d", &id)
+				if id > 0 {
+					if err := m.repo.DeleteTelemetryRecord(id); err == nil {
+						m.statusMsg = fmt.Sprintf("Registro #%d excluído com sucesso!", id)
+						m.initHistoryTable()
+						return m, nil
+					}
+				}
+			}
+		}
 		m.historyTable, cmd = m.historyTable.Update(msg)
 	}
 

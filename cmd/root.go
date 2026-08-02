@@ -45,6 +45,7 @@ e gerenciar por exceção os custos invisíveis com o Buffer Operacional (A Caix
 	c.AddCommand(NewHistoryCmd())
 	c.AddCommand(NewVersionCmd())
 	c.AddCommand(NewMathCmd())
+	c.AddCommand(NewDeleteRecordCmd())
 	return c
 }
 
@@ -55,4 +56,5 @@ func init() {
 	rootCmd.AddCommand(NewHistoryCmd())
 	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.AddCommand(NewMathCmd())
+	rootCmd.AddCommand(NewDeleteRecordCmd())
 }
