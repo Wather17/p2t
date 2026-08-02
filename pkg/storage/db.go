@@ -69,6 +69,13 @@ var migrations = []migration{
 		);
 		`,
 	},
+	{
+		version: 2,
+		stmt: `
+		ALTER TABLE telemetry_cycles ADD COLUMN reference_month TEXT NOT NULL DEFAULT '';
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_telemetry_reference_month ON telemetry_cycles(reference_month) WHERE reference_month != '';
+		`,
+	},
 }
 
 // GetUserVersion retorna a versao atual do esquema do banco SQLite.
