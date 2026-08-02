@@ -129,3 +129,48 @@ func TestRepository_Buffer(t *testing.T) {
 		t.Errorf("esperado ultima reposicao=%.2f, obtido=%.2f", expectedLast, replenishments[2])
 	}
 }
+
+func TestRepository_GetTelemetryAnalytics(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+
+	// Inserir 4 ciclos de teste
+	months := []string{"2026-01", "2026-02", "2026-03", "2026-04"}
+	idts := []float64{8.0, 10.0, 12.0, 14.0}
+
+	for i, m := range months {
+		input := p2t.TelemetryInput{
+			GrossSalary:     5000.0,
+			FixedDeductions: 800.0,
+			ErrorDeductions: idts[i] * 50.0,
+			InvisibleCosts:  100.0,
+			ContractHours:   160.0,
+			CommuteHours:    30.0,
+		}
+		res, _ := p2t.CalculateTelemetry(input)
+		_, _ = repo.SaveTelemetry(input, res, m)
+	}
+
+	analytics, err := repo.GetTelemetryAnalytics()
+	if err != nil {
+		t.Fatalf("falha ao calcular analytics: %v", err)
+	}
+
+	if analytics.TotalRecords != 4 {
+		t.Errorf("esperado 4 registros totais, obtido: %d", analytics.TotalRecords)
+	}
+
+	if analytics.IDT3 <= 0 {
+		t.Errorf("esperado IDT3 > 0, obtido: %.2f", analytics.IDT3)
+	}
+
+	if analytics.TotalAnnualInvisibleCosts <= 0 {
+		t.Errorf("esperado TotalAnnualInvisibleCosts > 0, obtido: %.2f", analytics.TotalAnnualInvisibleCosts)
+	}
+}
+
