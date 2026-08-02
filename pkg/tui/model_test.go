@@ -45,7 +45,7 @@ func TestMainModel_PrefillAndTabSwitch(t *testing.T) {
 		CommuteHours:    30.0,
 	}
 	res, _ := p2t.CalculateTelemetry(input)
-	_, err = repo.SaveTelemetry(input, res)
+	_, err = repo.SaveTelemetry(input, res, "2026-06")
 	if err != nil {
 		t.Fatalf("falha ao salvar registro no banco: %v", err)
 	}

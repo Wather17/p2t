@@ -21,6 +21,7 @@ type TelemetryRecord struct {
 	RealLiquidity   float64
 	VRH             float64
 	IDT             float64
+	ReferenceMonth  string
 	CreatedAt       time.Time
 }
 
@@ -43,17 +44,17 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-// SaveTelemetry insere um registro de telemetria no banco.
-func (r *Repository) SaveTelemetry(input p2t.TelemetryInput, res p2t.TelemetryResult) (int64, error) {
+// SaveTelemetry insere ou atualiza um registro de telemetria no banco.
+func (r *Repository) SaveTelemetry(input p2t.TelemetryInput, res p2t.TelemetryResult, referenceMonth string) (int64, error) {
 	query := `
 	INSERT INTO telemetry_cycles (
 		gross_salary, fixed_deductions, error_deductions, invisible_costs,
-		contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+		contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, reference_month
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`
 	result, err := r.db.Exec(query,
 		input.GrossSalary, input.FixedDeductions, input.ErrorDeductions, input.InvisibleCosts,
-		input.ContractHours, input.CommuteHours, res.TotalHours, res.RealLiquidity, res.VRH, res.IDT,
+		input.ContractHours, input.CommuteHours, res.TotalHours, res.RealLiquidity, res.VRH, res.IDT, referenceMonth,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("falha ao salvar telemetria: %w", err)
@@ -90,10 +91,10 @@ func (r *Repository) GetRecentIDTHistory(limit int) ([]float64, error) {
 func (r *Repository) GetRecentTelemetryRecords(limit int) ([]TelemetryRecord, error) {
 	query := `
 	SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
-	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, created_at
+	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, reference_month, created_at
 	FROM (
 		SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
-		       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, created_at
+		       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, reference_month, created_at
 		FROM telemetry_cycles ORDER BY id DESC LIMIT ?
 	) ORDER BY id ASC;
 	`
@@ -108,7 +109,7 @@ func (r *Repository) GetRecentTelemetryRecords(limit int) ([]TelemetryRecord, er
 		var rec TelemetryRecord
 		err := rows.Scan(
 			&rec.ID, &rec.GrossSalary, &rec.FixedDeductions, &rec.ErrorDeductions, &rec.InvisibleCosts,
-			&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.CreatedAt,
+			&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.ReferenceMonth, &rec.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -122,13 +123,13 @@ func (r *Repository) GetRecentTelemetryRecords(limit int) ([]TelemetryRecord, er
 func (r *Repository) GetLatestTelemetryRecord() (*TelemetryRecord, error) {
 	query := `
 	SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
-	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, created_at
+	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, reference_month, created_at
 	FROM telemetry_cycles ORDER BY id DESC LIMIT 1;
 	`
 	var rec TelemetryRecord
 	err := r.db.QueryRow(query).Scan(
 		&rec.ID, &rec.GrossSalary, &rec.FixedDeductions, &rec.ErrorDeductions, &rec.InvisibleCosts,
-		&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.CreatedAt,
+		&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.ReferenceMonth, &rec.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -138,6 +139,28 @@ func (r *Repository) GetLatestTelemetryRecord() (*TelemetryRecord, error) {
 	}
 	return &rec, nil
 }
+
+// GetTelemetryByReferenceMonth busca um registro de telemetria pelo mes de competencia (YYYY-MM).
+func (r *Repository) GetTelemetryByReferenceMonth(refMonth string) (*TelemetryRecord, error) {
+	query := `
+	SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
+	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, reference_month, created_at
+	FROM telemetry_cycles WHERE reference_month = ?;
+	`
+	var rec TelemetryRecord
+	err := r.db.QueryRow(query, refMonth).Scan(
+		&rec.ID, &rec.GrossSalary, &rec.FixedDeductions, &rec.ErrorDeductions, &rec.InvisibleCosts,
+		&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.ReferenceMonth, &rec.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("falha ao consultar telemetria por competencia %s: %w", refMonth, err)
+	}
+	return &rec, nil
+}
+
 
 
 // SaveBufferCycle insere um registro de buffer operacional.

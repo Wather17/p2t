@@ -36,7 +36,7 @@ func TestRepository_Telemetry(t *testing.T) {
 		t.Fatalf("falha ao calcular telemetria: %v", err)
 	}
 
-	id, err := repo.SaveTelemetry(input, res)
+	id, err := repo.SaveTelemetry(input, res, "2026-05")
 	if err != nil {
 		t.Fatalf("falha ao salvar telemetria no banco: %v", err)
 	}
@@ -45,11 +45,11 @@ func TestRepository_Telemetry(t *testing.T) {
 	}
 
 	// Adiciona mais dois ciclos para testar historico de IDT
-	_, _ = repo.SaveTelemetry(input, res)
+	_, _ = repo.SaveTelemetry(input, res, "2026-06")
 	input2 := input
 	input2.ErrorDeductions = 500.0 // altera IDT
 	res2, _ := p2t.CalculateTelemetry(input2)
-	_, _ = repo.SaveTelemetry(input2, res2)
+	_, _ = repo.SaveTelemetry(input2, res2, "2026-07")
 
 	history, err := repo.GetRecentIDTHistory(3)
 	if err != nil {
@@ -78,6 +78,20 @@ func TestRepository_Telemetry(t *testing.T) {
 	}
 	if latest == nil || !almostEqual(latest.IDT, res2.IDT) {
 		t.Errorf("esperado ultimo registro com IDT=%.2f, obtido: %v", res2.IDT, latest)
+	}
+
+	recByMonth, err := repo.GetTelemetryByReferenceMonth("2026-07")
+	if err != nil || recByMonth == nil {
+		t.Fatalf("falha ao consultar telemetria por competencia 2026-07: %v", err)
+	}
+	if recByMonth.ReferenceMonth != "2026-07" {
+		t.Errorf("esperado competencia '2026-07', obtido: '%s'", recByMonth.ReferenceMonth)
+	}
+
+	// Testar trava de duplicidade para o mesmo mes de competencia
+	_, errDup := repo.SaveTelemetry(input, res, "2026-07")
+	if errDup == nil {
+		t.Errorf("esperado erro de duplicidade ao salvar segundo registro com a mesma competencia '2026-07'")
 	}
 }
 

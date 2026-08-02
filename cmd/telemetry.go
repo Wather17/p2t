@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Wather17/p2t/pkg/p2t"
 	"github.com/Wather17/p2t/pkg/storage"
@@ -24,6 +25,7 @@ func NewTelemetryCmd() *cobra.Command {
 		dbPath          string
 		noSave          bool
 		interactive     bool
+		referenceMonth  string
 	)
 
 	cmd := &cobra.Command{
@@ -32,6 +34,10 @@ func NewTelemetryCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			in := cmd.InOrStdin()
 			out := cmd.OutOrStdout()
+
+			if referenceMonth == "" {
+				referenceMonth = time.Now().AddDate(0, -1, 0).Format("2006-01")
+			}
 
 			// Se a flag interactive for explicitamente usada ou se os valores obrigatorios forem omissos
 			if interactive || (grossSalary <= 0 && contractHours <= 0) {
@@ -88,6 +94,7 @@ func NewTelemetryCmd() *cobra.Command {
 			}
 
 			fmt.Fprintf(out, "=== Telemetria de Retorno de Tempo (p2t) ===\n")
+			fmt.Fprintf(out, "Mês de Competência: %s\n", referenceMonth)
 			fmt.Fprintf(out, "Carga Horaria Total (HT): %.2f h\n", res.TotalHours)
 			fmt.Fprintf(out, "Descontos Legais Aplicados (DF): R$ %.2f\n", fixedDeductions)
 			fmt.Fprintf(out, "Liquidez Real (SL): R$ %.2f\n", res.RealLiquidity)
@@ -108,8 +115,10 @@ func NewTelemetryCmd() *cobra.Command {
 						history = append(history, prevHistory...)
 					}
 
-					if _, errSave := repo.SaveTelemetry(input, res); errSave == nil {
-						fmt.Fprintf(out, "[Storage] Ciclo registrado no SQLite com sucesso.\n")
+					if _, errSave := repo.SaveTelemetry(input, res, referenceMonth); errSave == nil {
+						fmt.Fprintf(out, "[Storage] Ciclo registrado no SQLite com sucesso para a competência %s.\n", referenceMonth)
+					} else {
+						fmt.Fprintf(out, "[Storage] Aviso: Não foi possível salvar (possível registro já existente para %s).\n", referenceMonth)
 					}
 				}
 			}
@@ -150,6 +159,7 @@ func NewTelemetryCmd() *cobra.Command {
 	cmd.Flags().Float64VarP(&contractHours, "contract-hours", "H", 0, "Horas Mensais Contratuais (HC)")
 	cmd.Flags().Float64VarP(&commuteHours, "commute-hours", "d", 0, "Horas Mensais de Deslocamento (HD)")
 	cmd.Flags().StringVarP(&idtHistoryStr, "idt-history", "i", "", "Historico de IDTs anteriores separados por virgula (ex: 8.5,9.0)")
+	cmd.Flags().StringVarP(&referenceMonth, "reference-month", "m", "", "Mês de competência (formato YYYY-MM). Padrão: mês anterior.")
 	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
 	cmd.Flags().BoolVar(&noSave, "no-save", false, "Nao salvar este registro no banco de dados SQLite")
 	cmd.Flags().BoolVarP(&interactive, "interactive", "I", false, "Modo interativo por perguntas")
