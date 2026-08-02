@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Wather17/p2t/pkg/p2t"
 	"github.com/Wather17/p2t/pkg/storage"
@@ -297,7 +298,8 @@ func (m *MainModel) calculateCurrentTab() {
 		m.statusMsg = "Telemetria calculada e salva com sucesso!"
 
 		if m.repo != nil {
-			_, _ = m.repo.SaveTelemetry(input, res)
+			refMonth := time.Now().AddDate(0, -1, 0).Format("2006-01")
+			_, _ = m.repo.SaveTelemetry(input, res, refMonth)
 			m.initHistoryTable()
 		}
 	} else if m.activeTab == tabBuffer {
