@@ -63,6 +63,22 @@ func TestRepository_Telemetry(t *testing.T) {
 	if !almostEqual(history[2], res2.IDT) {
 		t.Errorf("esperado ultimo IDT=%.2f, obtido=%.2f", res2.IDT, history[2])
 	}
+
+	records, err := repo.GetRecentTelemetryRecords(3)
+	if err != nil {
+		t.Fatalf("falha ao consultar registros de telemetria: %v", err)
+	}
+	if len(records) != 3 {
+		t.Fatalf("esperado 3 registros completos, obtido: %d", len(records))
+	}
+
+	latest, err := repo.GetLatestTelemetryRecord()
+	if err != nil {
+		t.Fatalf("falha ao consultar ultimo registro de telemetria: %v", err)
+	}
+	if latest == nil || !almostEqual(latest.IDT, res2.IDT) {
+		t.Errorf("esperado ultimo registro com IDT=%.2f, obtido: %v", res2.IDT, latest)
+	}
 }
 
 func TestRepository_Buffer(t *testing.T) {

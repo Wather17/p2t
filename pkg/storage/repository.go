@@ -86,6 +86,60 @@ func (r *Repository) GetRecentIDTHistory(limit int) ([]float64, error) {
 	return history, rows.Err()
 }
 
+// GetRecentTelemetryRecords retorna os N registros de telemetria mais recentes ordenados cronologicamente.
+func (r *Repository) GetRecentTelemetryRecords(limit int) ([]TelemetryRecord, error) {
+	query := `
+	SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
+	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, created_at
+	FROM (
+		SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
+		       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, created_at
+		FROM telemetry_cycles ORDER BY id DESC LIMIT ?
+	) ORDER BY id ASC;
+	`
+	rows, err := r.db.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao consultar registros de telemetria: %w", err)
+	}
+	defer rows.Close()
+
+	var records []TelemetryRecord
+	for rows.Next() {
+		var rec TelemetryRecord
+		err := rows.Scan(
+			&rec.ID, &rec.GrossSalary, &rec.FixedDeductions, &rec.ErrorDeductions, &rec.InvisibleCosts,
+			&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, rec)
+	}
+	return records, rows.Err()
+}
+
+// GetLatestTelemetryRecord retorna o registro de telemetria mais recente salvo no banco, se existir.
+func (r *Repository) GetLatestTelemetryRecord() (*TelemetryRecord, error) {
+	query := `
+	SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
+	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, created_at
+	FROM telemetry_cycles ORDER BY id DESC LIMIT 1;
+	`
+	var rec TelemetryRecord
+	err := r.db.QueryRow(query).Scan(
+		&rec.ID, &rec.GrossSalary, &rec.FixedDeductions, &rec.ErrorDeductions, &rec.InvisibleCosts,
+		&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("falha ao consultar ultimo registro de telemetria: %w", err)
+	}
+	return &rec, nil
+}
+
+
 // SaveBufferCycle insere um registro de buffer operacional.
 func (r *Repository) SaveBufferCycle(cap, remainingBalance, invisibleCost float64) (int64, error) {
 	query := `
