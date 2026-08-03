@@ -3,6 +3,7 @@ package p2t
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // IDTZone representa a zona de decisao baseada no IDT.
@@ -13,6 +14,94 @@ const (
 	ZoneYellow IDTZone = "Zona Amarela"
 	ZoneRed    IDTZone = "Zona Vermelha"
 )
+
+// WorkSchedule representa o tipo de escala de trabalho presencial.
+type WorkSchedule string
+
+const (
+	Schedule5x2   WorkSchedule = "5x2"
+	Schedule6x1   WorkSchedule = "6x1"
+	Schedule12x36 WorkSchedule = "12x36"
+	Schedule4x3   WorkSchedule = "4x3"
+)
+
+// CalculateExactShifts calcula a quantidade exata de plantões/dias trabalhados no mês de competência a partir de uma data de referência.
+func CalculateExactShifts(schedule WorkSchedule, refDate time.Time, referenceMonth string) (int, error) {
+	parsedMonth, err := time.Parse("2006-01", referenceMonth)
+	if err != nil {
+		return 0, fmt.Errorf("formato de mês de competência inválido '%s': esperado YYYY-MM", referenceMonth)
+	}
+
+	startOfMonth := time.Date(parsedMonth.Year(), parsedMonth.Month(), 1, 0, 0, 0, 0, time.UTC)
+	endOfMonth := startOfMonth.AddDate(0, 1, -1)
+
+	refDateUTC := time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 0, 0, 0, 0, time.UTC)
+
+	shifts := 0
+	for d := startOfMonth; !d.After(endOfMonth); d = d.AddDate(0, 0, 1) {
+		switch schedule {
+		case Schedule12x36:
+			diffDays := int(d.Sub(refDateUTC).Hours() / 24)
+			if diffDays%2 == 0 {
+				shifts++
+			}
+		case Schedule5x2:
+			if d.Weekday() != time.Saturday && d.Weekday() != time.Sunday {
+				shifts++
+			}
+		case Schedule6x1:
+			if d.Weekday() != time.Sunday {
+				shifts++
+			}
+		case Schedule4x3:
+			if d.Weekday() >= time.Monday && d.Weekday() <= time.Thursday {
+				shifts++
+			}
+		default:
+			return 0, fmt.Errorf("escala de trabalho inválida ou não suportada: '%s'", schedule)
+		}
+	}
+
+	return shifts, nil
+}
+
+// CalculateCommuteHoursWithRefDate calcula as horas de deslocamento considerando o calendário exato do mês.
+func CalculateCommuteHoursWithRefDate(schedule WorkSchedule, dailyCommuteHours float64, refDate time.Time, referenceMonth string) (float64, int, error) {
+	if dailyCommuteHours < 0 {
+		return 0, 0, errors.New("horas de deslocamento diario nao podem ser negativas")
+	}
+
+	exactShifts, err := CalculateExactShifts(schedule, refDate, referenceMonth)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	totalHours := RoundPercentage(float64(exactShifts) * dailyCommuteHours)
+	return totalHours, exactShifts, nil
+}
+
+// CalculateCommuteHours calcula o total de horas mensais de deslocamento (HD) com base na escala estimada e horas diarias de trânsito.
+func CalculateCommuteHours(schedule WorkSchedule, dailyCommuteHours float64) (float64, error) {
+	if dailyCommuteHours < 0 {
+		return 0, errors.New("horas de deslocamento diario nao podem ser negativas")
+	}
+
+	var monthlyDays float64
+	switch schedule {
+	case Schedule5x2:
+		monthlyDays = 22.0
+	case Schedule6x1:
+		monthlyDays = 26.0
+	case Schedule12x36:
+		monthlyDays = 15.0
+	case Schedule4x3:
+		monthlyDays = 17.0
+	default:
+		return 0, fmt.Errorf("escala de trabalho invalida ou nao suportada: '%s'", schedule)
+	}
+
+	return RoundPercentage(monthlyDays * dailyCommuteHours), nil
+}
 
 // TelemetryInput engloba as variaveis de um ciclo mensal para telemetria de tempo e retorno.
 type TelemetryInput struct {

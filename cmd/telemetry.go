@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Wather17/p2t/pkg/p2t"
 	"github.com/Wather17/p2t/pkg/storage"
@@ -24,6 +25,10 @@ func NewTelemetryCmd() *cobra.Command {
 		dbPath          string
 		noSave          bool
 		interactive     bool
+		referenceMonth  string
+		workSchedule    string
+		dailyCommute    float64
+		shiftRefDate    string
 	)
 
 	cmd := &cobra.Command{
@@ -32,6 +37,32 @@ func NewTelemetryCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			in := cmd.InOrStdin()
 			out := cmd.OutOrStdout()
+
+			if referenceMonth == "" {
+				referenceMonth = time.Now().AddDate(0, -1, 0).Format("2006-01")
+			}
+
+			var exactShiftsCount int
+			if workSchedule != "" && dailyCommute > 0 {
+				if shiftRefDate != "" {
+					parsedRef, err := time.Parse("2006-01-02", shiftRefDate)
+					if err != nil {
+						return fmt.Errorf("formato de data de referência da escala inválido '%s': esperado YYYY-MM-DD", shiftRefDate)
+					}
+					computedHD, count, err := p2t.CalculateCommuteHoursWithRefDate(p2t.WorkSchedule(workSchedule), dailyCommute, parsedRef, referenceMonth)
+					if err != nil {
+						return err
+					}
+					commuteHours = computedHD
+					exactShiftsCount = count
+				} else {
+					computedHD, err := p2t.CalculateCommuteHours(p2t.WorkSchedule(workSchedule), dailyCommute)
+					if err != nil {
+						return err
+					}
+					commuteHours = computedHD
+				}
+			}
 
 			// Se a flag interactive for explicitamente usada ou se os valores obrigatorios forem omissos
 			if interactive || (grossSalary <= 0 && contractHours <= 0) {
@@ -45,8 +76,10 @@ func NewTelemetryCmd() *cobra.Command {
 				if contractHours, err = PromptFloat(scanner, out, "Carga Horária Mensal Contratual (HC em horas)", contractHours); err != nil {
 					return err
 				}
-				if commuteHours, err = PromptFloat(scanner, out, "Horas Mensais gastas exclusivamente em Deslocamento (HD)", commuteHours); err != nil {
-					return err
+				if commuteHours <= 0 {
+					if commuteHours, err = PromptFloat(scanner, out, "Horas Mensais gastas exclusivamente em Deslocamento (HD)", commuteHours); err != nil {
+						return err
+					}
 				}
 
 				// Calcula estimativa automatica de descontos legais se nao especificado
@@ -88,6 +121,14 @@ func NewTelemetryCmd() *cobra.Command {
 			}
 
 			fmt.Fprintf(out, "=== Telemetria de Retorno de Tempo (p2t) ===\n")
+			fmt.Fprintf(out, "Mês de Competência: %s\n", referenceMonth)
+			if workSchedule != "" {
+				if exactShiftsCount > 0 {
+					fmt.Fprintf(out, "Escala de Trabalho: %s (Calendário Exato: %d plantões, HD: %.2f h/mês)\n", workSchedule, exactShiftsCount, commuteHours)
+				} else {
+					fmt.Fprintf(out, "Escala de Trabalho: %s (HD calculado: %.2f h/mês)\n", workSchedule, commuteHours)
+				}
+			}
 			fmt.Fprintf(out, "Carga Horaria Total (HT): %.2f h\n", res.TotalHours)
 			fmt.Fprintf(out, "Descontos Legais Aplicados (DF): R$ %.2f\n", fixedDeductions)
 			fmt.Fprintf(out, "Liquidez Real (SL): R$ %.2f\n", res.RealLiquidity)
@@ -108,8 +149,10 @@ func NewTelemetryCmd() *cobra.Command {
 						history = append(history, prevHistory...)
 					}
 
-					if _, errSave := repo.SaveTelemetry(input, res); errSave == nil {
-						fmt.Fprintf(out, "[Storage] Ciclo registrado no SQLite com sucesso.\n")
+					if _, errSave := repo.SaveTelemetry(input, res, referenceMonth); errSave == nil {
+						fmt.Fprintf(out, "[Storage] Ciclo registrado no SQLite com sucesso para a competência %s.\n", referenceMonth)
+					} else {
+						fmt.Fprintf(out, "[Storage] Aviso: Não foi possível salvar (possível registro já existente para %s).\n", referenceMonth)
 					}
 				}
 			}
@@ -149,7 +192,11 @@ func NewTelemetryCmd() *cobra.Command {
 	cmd.Flags().Float64VarP(&invisibleCosts, "invisible-costs", "c", 0, "Custos Invisiveis de Permanencia (CI)")
 	cmd.Flags().Float64VarP(&contractHours, "contract-hours", "H", 0, "Horas Mensais Contratuais (HC)")
 	cmd.Flags().Float64VarP(&commuteHours, "commute-hours", "d", 0, "Horas Mensais de Deslocamento (HD)")
+	cmd.Flags().StringVarP(&workSchedule, "schedule", "W", "", "Escala de trabalho presencial (5x2, 6x1, 12x36, 4x3)")
+	cmd.Flags().Float64VarP(&dailyCommute, "daily-commute", "D", 0, "Horas diarias de deslocamento (ida + volta) para calculo via escala")
+	cmd.Flags().StringVarP(&shiftRefDate, "shift-ref-date", "R", "", "Data de referência de um plantão/serviço (formato YYYY-MM-DD) para cálculo exato de calendário")
 	cmd.Flags().StringVarP(&idtHistoryStr, "idt-history", "i", "", "Historico de IDTs anteriores separados por virgula (ex: 8.5,9.0)")
+	cmd.Flags().StringVarP(&referenceMonth, "reference-month", "m", "", "Mês de competência (formato YYYY-MM). Padrão: mês anterior.")
 	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
 	cmd.Flags().BoolVar(&noSave, "no-save", false, "Nao salvar este registro no banco de dados SQLite")
 	cmd.Flags().BoolVarP(&interactive, "interactive", "I", false, "Modo interativo por perguntas")

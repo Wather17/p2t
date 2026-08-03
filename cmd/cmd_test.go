@@ -57,6 +57,58 @@ func TestTelemetryCmd_Success(t *testing.T) {
 	}
 }
 
+func TestTelemetryCmd_WithSchedule(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "160",
+		"-W", "5x2",
+		"-D", "1.5",
+	})
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("erro ao executar comando telemetry com schedule: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "Escala de Trabalho: 5x2 (HD calculado: 33.00 h/mês)") {
+		t.Errorf("saida esperada de escala 5x2 nao encontrada: %s", out)
+	}
+}
+
+func TestTelemetryCmd_WithExactShiftRefDate(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "180",
+		"-W", "12x36",
+		"-D", "2.0",
+		"-R", "2026-07-01",
+		"-m", "2026-07",
+	})
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("erro ao executar comando telemetry com refDate: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "Escala de Trabalho: 12x36 (Calendário Exato: 16 plantões, HD: 32.00 h/mês)") {
+		t.Errorf("saida esperada de escala 12x36 exata nao encontrada: %s", out)
+	}
+}
+
 func TestTelemetryCmd_InteractiveBrazilianFormat(t *testing.T) {
 	rootCmd := cmd.NewRootCmd()
 	outBuf := new(bytes.Buffer)

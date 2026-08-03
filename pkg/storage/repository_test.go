@@ -36,7 +36,7 @@ func TestRepository_Telemetry(t *testing.T) {
 		t.Fatalf("falha ao calcular telemetria: %v", err)
 	}
 
-	id, err := repo.SaveTelemetry(input, res)
+	id, err := repo.SaveTelemetry(input, res, "2026-05")
 	if err != nil {
 		t.Fatalf("falha ao salvar telemetria no banco: %v", err)
 	}
@@ -45,11 +45,11 @@ func TestRepository_Telemetry(t *testing.T) {
 	}
 
 	// Adiciona mais dois ciclos para testar historico de IDT
-	_, _ = repo.SaveTelemetry(input, res)
+	_, _ = repo.SaveTelemetry(input, res, "2026-06")
 	input2 := input
 	input2.ErrorDeductions = 500.0 // altera IDT
 	res2, _ := p2t.CalculateTelemetry(input2)
-	_, _ = repo.SaveTelemetry(input2, res2)
+	_, _ = repo.SaveTelemetry(input2, res2, "2026-07")
 
 	history, err := repo.GetRecentIDTHistory(3)
 	if err != nil {
@@ -62,6 +62,36 @@ func TestRepository_Telemetry(t *testing.T) {
 
 	if !almostEqual(history[2], res2.IDT) {
 		t.Errorf("esperado ultimo IDT=%.2f, obtido=%.2f", res2.IDT, history[2])
+	}
+
+	records, err := repo.GetRecentTelemetryRecords(3)
+	if err != nil {
+		t.Fatalf("falha ao consultar registros de telemetria: %v", err)
+	}
+	if len(records) != 3 {
+		t.Fatalf("esperado 3 registros completos, obtido: %d", len(records))
+	}
+
+	latest, err := repo.GetLatestTelemetryRecord()
+	if err != nil {
+		t.Fatalf("falha ao consultar ultimo registro de telemetria: %v", err)
+	}
+	if latest == nil || !almostEqual(latest.IDT, res2.IDT) {
+		t.Errorf("esperado ultimo registro com IDT=%.2f, obtido: %v", res2.IDT, latest)
+	}
+
+	recByMonth, err := repo.GetTelemetryByReferenceMonth("2026-07")
+	if err != nil || recByMonth == nil {
+		t.Fatalf("falha ao consultar telemetria por competencia 2026-07: %v", err)
+	}
+	if recByMonth.ReferenceMonth != "2026-07" {
+		t.Errorf("esperado competencia '2026-07', obtido: '%s'", recByMonth.ReferenceMonth)
+	}
+
+	// Testar trava de duplicidade para o mesmo mes de competencia
+	_, errDup := repo.SaveTelemetry(input, res, "2026-07")
+	if errDup == nil {
+		t.Errorf("esperado erro de duplicidade ao salvar segundo registro com a mesma competencia '2026-07'")
 	}
 }
 
@@ -99,3 +129,100 @@ func TestRepository_Buffer(t *testing.T) {
 		t.Errorf("esperado ultima reposicao=%.2f, obtido=%.2f", expectedLast, replenishments[2])
 	}
 }
+
+func TestRepository_GetTelemetryAnalytics(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+
+	// Inserir 4 ciclos de teste
+	months := []string{"2026-01", "2026-02", "2026-03", "2026-04"}
+	idts := []float64{8.0, 10.0, 12.0, 14.0}
+
+	for i, m := range months {
+		input := p2t.TelemetryInput{
+			GrossSalary:     5000.0,
+			FixedDeductions: 800.0,
+			ErrorDeductions: idts[i] * 50.0,
+			InvisibleCosts:  100.0,
+			ContractHours:   160.0,
+			CommuteHours:    30.0,
+		}
+		res, _ := p2t.CalculateTelemetry(input)
+		_, _ = repo.SaveTelemetry(input, res, m)
+	}
+
+	analytics, err := repo.GetTelemetryAnalytics()
+	if err != nil {
+		t.Fatalf("falha ao calcular analytics: %v", err)
+	}
+
+	if analytics.TotalRecords != 4 {
+		t.Errorf("esperado 4 registros totais, obtido: %d", analytics.TotalRecords)
+	}
+
+	if analytics.IDT3 <= 0 {
+		t.Errorf("esperado IDT3 > 0, obtido: %.2f", analytics.IDT3)
+	}
+
+	if analytics.TotalAnnualInvisibleCosts <= 0 {
+		t.Errorf("esperado TotalAnnualInvisibleCosts > 0, obtido: %.2f", analytics.TotalAnnualInvisibleCosts)
+	}
+}
+
+func TestRepository_DeleteAndUpdate(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+
+	input := p2t.TelemetryInput{
+		GrossSalary:     5000.0,
+		FixedDeductions: 800.0,
+		ErrorDeductions: 0.0,
+		InvisibleCosts:  100.0,
+		ContractHours:   160.0,
+		CommuteHours:    30.0,
+	}
+	res, _ := p2t.CalculateTelemetry(input)
+
+	id, err := repo.SaveTelemetry(input, res, "2026-05")
+	if err != nil {
+		t.Fatalf("falha ao salvar registro: %v", err)
+	}
+
+	// Testar atualizacao
+	input.GrossSalary = 6000.0
+	resUpdated, _ := p2t.CalculateTelemetry(input)
+	err = repo.UpdateTelemetryRecord(id, input, resUpdated, "2026-05")
+	if err != nil {
+		t.Fatalf("falha ao atualizar registro #%d: %v", id, err)
+	}
+
+	latest, _ := repo.GetLatestTelemetryRecord()
+	if !almostEqual(latest.GrossSalary, 6000.0) {
+		t.Errorf("esperado salario atualizado=6000.0, obtido=%.2f", latest.GrossSalary)
+	}
+
+	// Testar exclusao de telemetria
+	err = repo.DeleteTelemetryRecord(id)
+	if err != nil {
+		t.Fatalf("falha ao excluir registro #%d: %v", id, err)
+	}
+
+	// Testar exclusao de buffer
+	bufID, _ := repo.SaveBufferCycle(300.0, 150.0, 150.0)
+	err = repo.DeleteBufferRecord(bufID)
+	if err != nil {
+		t.Fatalf("falha ao excluir registro de buffer #%d: %v", bufID, err)
+	}
+}
+
+
