@@ -5,6 +5,7 @@ issues/
 
 # Binaries
 bin/
+dist/
 
 # SQLite databases
 *.db
