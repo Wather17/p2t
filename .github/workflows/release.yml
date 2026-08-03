@@ -1,0 +1,113 @@
+name: Release p2t CLI
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: true
+
+      - name: Compile Cross-Platform Binaries
+        run: |
+          TAG_VERSION=${GITHUB_REF_NAME}
+          COMMIT=$(git rev-parse --short HEAD)
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          LDFLAGS="-X github.com/Wather17/p2t/cmd.Version=${TAG_VERSION} -X github.com/Wather17/p2t/cmd.Commit=${COMMIT} -X github.com/Wather17/p2t/cmd.Date=${DATE} -s -w"
+
+          mkdir -p dist
+
+          # Linux AMD64
+          GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/p2t-linux-amd64 ./cmd/p2t
+
+          # Linux ARM64
+          GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o dist/p2t-linux-arm64 ./cmd/p2t
+
+          # Windows AMD64
+          GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/p2t-windows-amd64.exe ./cmd/p2t
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/p2t-linux-amd64
+            dist/p2t-linux-arm64
+            dist/p2t-windows-amd64.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Scoop Manifest
+        continue-on-error: true
+        run: |
+          RAW_VERSION=${GITHUB_REF_NAME#v}
+          WIN_HASH=$(sha256sum dist/p2t-windows-amd64.exe | awk '{print $1}')
+
+          echo "Atualizando bucket/p2t.json (Versão=${RAW_VERSION}, Hash=${WIN_HASH})..."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          SUCCESS=0
+          for attempt in 1 2 3; do
+            echo "Tentativa $attempt de atualizar o manifesto Scoop..."
+            git fetch origin main
+            git checkout -B temp-scoop-branch origin/main
+
+            python3 -c "
+          import json
+          with open('bucket/p2t.json', 'r') as f:
+              data = json.load(f)
+          data['version'] = '${RAW_VERSION}'
+          data['architecture']['64bit']['url'] = 'https://github.com/Wather17/p2t/releases/download/v${RAW_VERSION}/p2t-windows-amd64.exe'
+          data['architecture']['64bit']['hash'] = '${WIN_HASH}'
+          with open('bucket/p2t.json', 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          "
+
+            git add bucket/p2t.json
+            if git diff --quiet && git diff --staged --quiet; then
+              echo "Manifesto Scoop já estava atualizado."
+              SUCCESS=1
+              break
+            fi
+
+            git commit -m "chore(scoop): atualizar manifesto para v${RAW_VERSION}"
+            if git push origin temp-scoop-branch:main; then
+              echo "Manifesto Scoop publicado com sucesso na main."
+              SUCCESS=1
+              break
+            fi
+
+            sleep 2
+          done
+
+          if [ $SUCCESS -ne 1 ]; then
+            echo "Aviso: Não foi possível atualizar o manifesto Scoop automaticamente."
+            exit 1
+          fi
