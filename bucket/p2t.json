@@ -1,12 +1,12 @@
 {
-  "version": "0.2.0",
-  "description": "p2t (Pay to Work) - Telemetria de Eficiência de Trabalho e Valor Real da Hora",
+  "version": "0.2.1",
+  "description": "p2t (Pay to Work) - Telemetria de Efici\u00eancia de Trabalho e Valor Real da Hora",
   "homepage": "https://github.com/Wather17/p2t",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/Wather17/p2t/releases/download/v0.2.0/p2t-windows-amd64.exe",
-      "hash": ""
+      "url": "https://github.com/Wather17/p2t/releases/download/v0.2.1/p2t-windows-amd64.exe",
+      "hash": "add87c5d2afef63310b48d4a4ff76fceec731f06a2ded38fa1b18a281dc2b194"
     }
   },
   "bin": [
