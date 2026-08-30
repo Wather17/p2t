@@ -202,4 +202,67 @@ func TestCalculateExactShifts(t *testing.T) {
 	}
 }
 
+func TestCalculateCommuteHoursWithAdjustments(t *testing.T) {
+	refDate := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 
+	// Baseline: 16 plantoes, 32.0h (12x36 julho/2026, refDate dia 1)
+	hours, count, err := p2t.CalculateCommuteHoursWithAdjustments(p2t.Schedule12x36, 2.0, refDate, "2026-07", 0)
+	if err != nil {
+		t.Fatalf("erro inesperado no baseline: %v", err)
+	}
+	if count != 16 || !almostEqual(hours, 32.0) {
+		t.Errorf("baseline esperado 16 plantoes/32.0h, obtido %d/%.2f", count, hours)
+	}
+
+	// 2 ausencias: 14 plantoes, 28.0h
+	hours, count, err = p2t.CalculateCommuteHoursWithAdjustments(p2t.Schedule12x36, 2.0, refDate, "2026-07", 2)
+	if err != nil {
+		t.Fatalf("erro inesperado com 2 ausencias: %v", err)
+	}
+	if count != 14 || !almostEqual(hours, 28.0) {
+		t.Errorf("esperado 14 plantoes/28.0h com 2 ausencias, obtido %d/%.2f", count, hours)
+	}
+
+	// 5x2 em fevereiro/2026 (nao-bissexto, 28 dias): seg-sex, dias 1,2,3,4,5... fevereiro 2026: 1=fevereiro de 2026 é domingo?
+	// 01/02/2026 e domingo, entao seg-sex: 2,3,4,5,6 ... = 20 dias uteis.
+	refFeb := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	_, _, err = p2t.CalculateCommuteHoursWithAdjustments(p2t.Schedule5x2, 1.0, refFeb, "2026-02", 5)
+	if err != nil {
+		t.Fatalf("erro no cenario de fevereiro: %v", err)
+	}
+	hours, count, _ = p2t.CalculateCommuteHoursWithAdjustments(p2t.Schedule5x2, 1.0, refFeb, "2026-02", 0)
+	if count != 20 {
+		t.Errorf("esperado 20 dias uteis em fev/2026 (nao-bissexto), obtido %d", count)
+	}
+	hours, count, err = p2t.CalculateCommuteHoursWithAdjustments(p2t.Schedule5x2, 1.0, refFeb, "2026-02", 5)
+	if err != nil || count != 15 || !almostEqual(hours, 15.0) {
+		t.Errorf("esperado 15/15.0h com 5 ausencias, obtido %d/%.2f err %v", count, hours, err)
+	}
+
+	// Erros: ausencias negativas e excedentes
+	if _, _, err := p2t.CalculateCommuteHoursWithAdjustments(p2t.Schedule12x36, 2.0, refDate, "2026-07", -1); err == nil {
+		t.Errorf("esperado erro para ausencias negativas")
+	}
+	if _, _, err := p2t.CalculateCommuteHoursWithAdjustments(p2t.Schedule12x36, 2.0, refDate, "2026-07", 40); err == nil {
+		t.Errorf("esperado erro para ausencias excedendo plantoes")
+	}
+}
+
+func TestCalculateCommuteHoursFromDays(t *testing.T) {
+	hours, err := p2t.CalculateCommuteHoursFromDays(21, 1.5)
+	if err != nil || !almostEqual(hours, 31.5) {
+		t.Errorf("esperado 31.5h para 21 dias x 1.5h, obtido %.2f (err %v)", hours, err)
+	}
+
+	hours, err = p2t.CalculateCommuteHoursFromDays(0, 1.5)
+	if err != nil || hours != 0 {
+		t.Errorf("esperado 0h para 0 dias, obtido %.2f", hours)
+	}
+
+	if _, err := p2t.CalculateCommuteHoursFromDays(-1, 1.5); err == nil {
+		t.Errorf("esperado erro para dias negativos")
+	}
+	if _, err := p2t.CalculateCommuteHoursFromDays(21, -1); err == nil {
+		t.Errorf("esperado erro para horas diarias negativas")
+	}
+}
