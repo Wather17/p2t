@@ -80,6 +80,39 @@ func CalculateCommuteHoursWithRefDate(schedule WorkSchedule, dailyCommuteHours f
 	return totalHours, exactShifts, nil
 }
 
+// CalculateCommuteHoursWithAdjustments calcula HD pelo calendario exato do mes subtraindo ausencias (ferias,
+// feriados, afastamentos informados manualmente). Retorna horas de deslocamento, plantoes liquidos e erro.
+func CalculateCommuteHoursWithAdjustments(schedule WorkSchedule, dailyCommuteHours float64, refDate time.Time, referenceMonth string, absences int) (float64, int, error) {
+	if absences < 0 {
+		return 0, 0, errors.New("numero de ausencias nao pode ser negativo")
+	}
+
+	exactShifts, err := CalculateExactShifts(schedule, refDate, referenceMonth)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if absences > exactShifts {
+		return 0, 0, fmt.Errorf("numero de ausencias (%d) excede a quantidade de plantões (%d)", absences, exactShifts)
+	}
+
+	netShifts := exactShifts - absences
+	totalHours := RoundCurrency(float64(netShifts) * dailyCommuteHours)
+	return totalHours, netShifts, nil
+}
+
+// CalculateCommuteHoursFromDays calcula HD a partir de dias trabalhados informados manualmente: HD = dias x horas/dia.
+func CalculateCommuteHoursFromDays(days float64, dailyCommuteHours float64) (float64, error) {
+	if days < 0 {
+		return 0, errors.New("dias trabalhados nao podem ser negativos")
+	}
+	if dailyCommuteHours < 0 {
+		return 0, errors.New("horas de deslocamento diario nao podem ser negativas")
+	}
+
+	return RoundCurrency(days * dailyCommuteHours), nil
+}
+
 // CalculateCommuteHours calcula o total de horas mensais de deslocamento (HD) com base na escala estimada e horas diarias de trânsito.
 func CalculateCommuteHours(schedule WorkSchedule, dailyCommuteHours float64) (float64, error) {
 	if dailyCommuteHours < 0 {
