@@ -157,7 +157,7 @@ func TestRepository_Buffer(t *testing.T) {
 
 	repo := storage.NewRepository(db)
 
-	id, err := repo.SaveBufferCycle(300.0, 180.0, 120.0)
+	id, err := repo.SaveBufferCycle(300.0, 180.0, 120.0, "2026-06")
 	if err != nil {
 		t.Fatalf("falha ao salvar ciclo de buffer: %v", err)
 	}
@@ -165,8 +165,9 @@ func TestRepository_Buffer(t *testing.T) {
 		t.Errorf("esperado ID > 0, obtido: %d", id)
 	}
 
-	_, _ = repo.SaveBufferCycle(300.0, 150.0, 150.0)
-	_, _ = repo.SaveBufferCycle(300.0, 200.0, 100.0)
+	_, _ = repo.SaveBufferCycle(300.0, 180.0, 120.0, "2026-05")
+	_, _ = repo.SaveBufferCycle(300.0, 150.0, 150.0, "2026-06")
+	_, _ = repo.SaveBufferCycle(300.0, 200.0, 100.0, "2026-07")
 
 	replenishments, err := repo.GetRecentReplenishments(3)
 	if err != nil {
@@ -271,9 +272,62 @@ func TestRepository_DeleteAndUpdate(t *testing.T) {
 	}
 
 	// Testar exclusao de buffer
-	bufID, _ := repo.SaveBufferCycle(300.0, 150.0, 150.0)
+	bufID, _ := repo.SaveBufferCycle(300.0, 150.0, 150.0, "2026-06")
 	err = repo.DeleteBufferRecord(bufID)
 	if err != nil {
 		t.Fatalf("falha ao excluir registro de buffer #%d: %v", bufID, err)
+	}
+}
+
+func TestRepository_BufferUpsertByReferenceMonth(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+
+	if _, err := repo.SaveBufferCycle(300.0, 180.0, 120.0, "2026-06"); err != nil {
+		t.Fatalf("falha ao salvar primeiro ciclo: %v", err)
+	}
+	if _, err := repo.SaveBufferCycle(300.0, 100.0, 200.0, "2026-06"); err != nil {
+		t.Fatalf("falha ao salvar ciclo da mesma competencia: %v", err)
+	}
+
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM buffer_cycles").Scan(&count); err != nil {
+		t.Fatalf("falha ao contar ciclos: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("esperado 1 ciclo apos dois saves da mesma competencia, obtido %d", count)
+	}
+
+	repls, err := repo.GetRecentReplenishments(10)
+	if err != nil {
+		t.Fatalf("falha ao consultar reposicoes: %v", err)
+	}
+	if len(repls) != 1 || !almostEqual(repls[0], 200.0) {
+		t.Errorf("esperado reposicao 200.0 (valor substituido), obtido %v", repls)
+	}
+
+	if _, err := repo.SaveBufferCycle(300.0, 150.0, 150.0, "2026-07"); err != nil {
+		t.Fatalf("falha ao salvar ciclo de outra competencia: %v", err)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM buffer_cycles").Scan(&count); err != nil {
+		t.Fatalf("falha ao contar ciclos: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("esperado 2 ciclos com competencias diferentes, obtido %d", count)
+	}
+
+	if _, err := repo.SaveBufferCycle(300.0, 180.0, 120.0, ""); err != nil {
+		t.Fatalf("falha ao salvar ciclo legado vazio: %v", err)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM buffer_cycles").Scan(&count); err != nil {
+		t.Fatalf("falha ao contar ciclos: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("registros legados ('') nao conflitam; esperado 3 ciclos, obtido %d", count)
 	}
 }

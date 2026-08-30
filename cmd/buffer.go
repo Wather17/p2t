@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Wather17/p2t/pkg/p2t"
 	"github.com/Wather17/p2t/pkg/storage"
@@ -28,6 +29,8 @@ func NewBufferCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			in := cmd.InOrStdin()
 			out := cmd.OutOrStdout()
+
+			referenceMonth := time.Now().AddDate(0, -1, 0).Format("2006-01")
 
 			if interactive || cap <= 0 {
 				fmt.Fprintln(out, "=== Modo Interativo: Gestão do Buffer Operacional (A Caixinha) ===")
@@ -72,8 +75,8 @@ func NewBufferCmd() *cobra.Command {
 						replenishments = append(replenishments, prevRepl...)
 					}
 
-					if _, errSave := repo.SaveBufferCycle(cap, remainingBalance, ci); errSave == nil {
-						fmt.Fprintf(out, "[Storage] Registro de buffer salvo no SQLite com sucesso.\n")
+					if _, errSave := repo.SaveBufferCycle(cap, remainingBalance, ci, referenceMonth); errSave == nil {
+						fmt.Fprintf(out, "[Storage] Registro de buffer salvo no SQLite com sucesso (competência %s).\n", referenceMonth)
 					}
 				}
 			}
