@@ -94,6 +94,12 @@ Calcula os custos invisíveis reais ($C_I$), atualiza o histórico e gera o diag
 * `--db`: Caminho do banco SQLite personalizado (padrão: `~/.p2t/p2t.db`).
 * `--no-save`: Executa sem persistir o registro no SQLite.
 
+#### Faixas de Diagnóstico do TCM:
+* **TCM < 45%:** Alta Eficiência.
+* **45% ≤ TCM ≤ 55%:** Eficiência Estável.
+* **55% < TCM ≤ 60%:** Alerta de Consumo Elevado (atenção ao limite crítico).
+* **TCM > 60%:** Anomalia de Consumo (auditoria do extrato).
+
 ---
 
 ### 3. Versão
