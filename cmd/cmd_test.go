@@ -109,6 +109,81 @@ func TestTelemetryCmd_WithExactShiftRefDate(t *testing.T) {
 	}
 }
 
+func TestTelemetryCmd_RefDateRejectedForNon12x36(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "160",
+		"-W", "5x2",
+		"-D", "1.5",
+		"-R", "2026-08-05",
+	})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatalf("esperado erro ao usar -R com escala diferente de 12x36")
+	}
+	if !strings.Contains(err.Error(), "--shift-ref-date é exclusivo da escala 12x36") {
+		t.Errorf("mensagem de erro inesperada: %v", err)
+	}
+	if strings.Contains(buf.String(), "Carga Horaria Total") {
+		t.Errorf("nenhuma linha de resultado deveria ser impressa: %s", buf.String())
+	}
+}
+
+func TestTelemetryCmd_RefDateRequiresSchedule(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "160",
+		"-R", "2026-08-05",
+	})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatalf("esperado erro ao usar -R sem -W 12x36")
+	}
+	if !strings.Contains(err.Error(), "--shift-ref-date é exclusivo da escala 12x36") {
+		t.Errorf("mensagem de erro inesperada: %v", err)
+	}
+}
+
+func TestTelemetryCmd_RefDateValidFor12x36(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "180",
+		"-W", "12x36",
+		"-D", "2.0",
+		"-R", "2026-07-01",
+		"-m", "2026-07",
+	})
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("erro ao executar comando telemetry 12x36 com refDate valida: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Calendário Exato: 16 plantões") {
+		t.Errorf("saida esperada de calendario exato nao encontrada: %s", out)
+	}
+}
+
 func TestTelemetryCmd_InteractiveBrazilianFormat(t *testing.T) {
 	rootCmd := cmd.NewRootCmd()
 	outBuf := new(bytes.Buffer)

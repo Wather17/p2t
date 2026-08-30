@@ -42,6 +42,10 @@ func NewTelemetryCmd() *cobra.Command {
 				referenceMonth = time.Now().AddDate(0, -1, 0).Format("2006-01")
 			}
 
+			if shiftRefDate != "" && p2t.WorkSchedule(workSchedule) != p2t.Schedule12x36 {
+				return fmt.Errorf("--shift-ref-date é exclusivo da escala 12x36 (use: -W 12x36 -R <YYYY-MM-DD>)")
+			}
+
 			var exactShiftsCount int
 			if workSchedule != "" && dailyCommute > 0 {
 				if shiftRefDate != "" {
@@ -194,7 +198,7 @@ func NewTelemetryCmd() *cobra.Command {
 	cmd.Flags().Float64VarP(&commuteHours, "commute-hours", "d", 0, "Horas Mensais de Deslocamento (HD)")
 	cmd.Flags().StringVarP(&workSchedule, "schedule", "W", "", "Escala de trabalho presencial (5x2, 6x1, 12x36, 4x3)")
 	cmd.Flags().Float64VarP(&dailyCommute, "daily-commute", "D", 0, "Horas diarias de deslocamento (ida + volta) para calculo via escala")
-	cmd.Flags().StringVarP(&shiftRefDate, "shift-ref-date", "R", "", "Data de referência de um plantão/serviço (formato YYYY-MM-DD) para cálculo exato de calendário")
+	cmd.Flags().StringVarP(&shiftRefDate, "shift-ref-date", "R", "", "Data de início de um plantão 12x36 (formato YYYY-MM-DD); apenas com -W 12x36")
 	cmd.Flags().StringVarP(&idtHistoryStr, "idt-history", "i", "", "Historico de IDTs anteriores separados por virgula (ex: 8.5,9.0)")
 	cmd.Flags().StringVarP(&referenceMonth, "reference-month", "m", "", "Mês de competência (formato YYYY-MM). Padrão: mês anterior.")
 	cmd.Flags().StringVar(&dbPath, "db", "", "Caminho do arquivo SQLite (padrao ~/.p2t/p2t.db)")
