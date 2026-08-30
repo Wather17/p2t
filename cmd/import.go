@@ -41,18 +41,28 @@ func NewImportCmd() *cobra.Command {
 			repo := storage.NewRepository(db)
 			ext := strings.ToLower(filepath.Ext(file))
 
-			var imported int
+			var result storage.ImportResult
 			if ext == ".csv" || strings.HasPrefix(strings.TrimSpace(string(data)), "id,") {
-				imported, err = storage.ImportTelemetryCSV(repo, data)
+				result, err = storage.ImportTelemetryCSV(repo, data)
 			} else {
-				imported, err = storage.ImportTelemetryJSON(repo, data)
+				result, err = storage.ImportTelemetryJSON(repo, data)
 			}
 
 			if err != nil {
 				return err
 			}
 
-			fmt.Fprintf(out, "Importação concluída: %d registro(s) inserido(s) no SQLite.\n", imported)
+			fmt.Fprintf(out, "Importação concluída: %d registro(s) inserido(s) no SQLite.\n", result.Inserted)
+			if result.Duplicated > 0 {
+				fmt.Fprintf(out, "Resumo: %d duplicado(s) ignorado(s) (competência já existente), %d falha(s).\n", result.Duplicated, result.Failed)
+			} else {
+				fmt.Fprintf(out, "Resumo: %d falha(s).\n", result.Failed)
+			}
+			if result.Duplicated > 0 || result.Failed > 0 {
+				for _, reason := range result.Why {
+					fmt.Fprintf(out, "  - %s\n", reason)
+				}
+			}
 			return nil
 		},
 	}
