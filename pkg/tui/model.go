@@ -82,7 +82,7 @@ func NewMainModel(db *sql.DB) MainModel {
 		if latest, err := repo.GetLatestTelemetryRecord(); err == nil && latest != nil {
 			m.inputSalary.SetValue(fmt.Sprintf("%.2f", latest.GrossSalary))
 			m.inputContract.SetValue(fmt.Sprintf("%.0f", latest.ContractHours))
-			m.inputCommute.SetValue(fmt.Sprintf("%.0f", latest.CommuteHours))
+			m.inputCommute.SetValue(fmt.Sprintf("%.2f", latest.CommuteHours))
 			m.inputErrors.SetValue(fmt.Sprintf("%.2f", latest.ErrorDeductions))
 			m.inputCosts.SetValue(fmt.Sprintf("%.2f", latest.InvisibleCosts))
 		}

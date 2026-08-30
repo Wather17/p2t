@@ -168,3 +168,46 @@ func TestMainModel_TelemetrySaveFailsWithoutDB(t *testing.T) {
 	}
 }
 
+func TestMainModel_CommutePrefillFractional(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+	input := p2t.TelemetryInput{
+		GrossSalary:     5000.0,
+		FixedDeductions: 1000.0,
+		ErrorDeductions: 100.0,
+		InvisibleCosts:  200.0,
+		ContractHours:   160.0,
+		CommuteHours:    31.5,
+	}
+	res, err := p2t.CalculateTelemetry(input)
+	if err != nil {
+		t.Fatalf("falha ao calcular telemetria: %v", err)
+	}
+	if _, err := repo.SaveTelemetry(input, res, "2026-06"); err != nil {
+		t.Fatalf("falha ao salvar registro: %v", err)
+	}
+
+	model := tui.NewMainModel(db)
+	if !strings.Contains(model.View(), "31.50") {
+		t.Errorf("esperado prefill de deslocamento com 2 casas decimais (%s) na View(): %s", "31.50", model.View())
+	}
+
+	// Enter sem edicao re-salva com o mesmo valor exato
+	model = pressKey(t, model, tea.KeyMsg{Type: tea.KeyEnter})
+	latest, err := repo.GetLatestTelemetryRecord()
+	if err != nil {
+		t.Fatalf("falha ao obter registro mais recente: %v", err)
+	}
+	if latest == nil {
+		t.Fatalf("esperado registro mais recente, obtido nil")
+	}
+	if latest.CommuteHours != 31.5 {
+		t.Errorf("esperado commute_hours = 31.5 apos re-save, obtido %.2f", latest.CommuteHours)
+	}
+}
+
