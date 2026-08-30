@@ -9,7 +9,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const (
+	// dbDirMode restringe o diretorio de dados ao usuario dono.
+	dbDirMode = 0o700
+	// dbFileMode restringe o arquivo de banco (dados financeiros) ao usuario dono.
+	dbFileMode = 0o600
+)
+
 // OpenDB abre ou cria uma conexao com o banco SQLite no caminho fornecido (ou em memoria se path == ":memory:").
+// O diretorio de dados padrao (~/.p2t) e criado com permissao 0700 e o arquivo de banco e restringido a 0600,
+// corrigindo de forma idempotente bancos legados criados com permissao aberta.
 func OpenDB(dbPath string) (*sql.DB, error) {
 	if dbPath == "" {
 		home, err := os.UserHomeDir()
@@ -17,7 +26,7 @@ func OpenDB(dbPath string) (*sql.DB, error) {
 			return nil, fmt.Errorf("falha ao obter diretorio home do usuario: %w", err)
 		}
 		dir := filepath.Join(home, ".p2t")
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, dbDirMode); err != nil {
 			return nil, fmt.Errorf("falha ao criar diretorio de dados: %w", err)
 		}
 		dbPath = filepath.Join(dir, "p2t.db")
@@ -31,6 +40,13 @@ func OpenDB(dbPath string) (*sql.DB, error) {
 	if err := migrate(db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("falha na migracao do banco de dados: %w", err)
+	}
+
+	if dbPath != ":memory:" {
+		if err := os.Chmod(dbPath, dbFileMode); err != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("falha ao restringir permissoes do banco %s para 0600: %w", dbPath, err)
+		}
 	}
 
 	return db, nil
@@ -120,4 +136,3 @@ func migrate(db *sql.DB) error {
 
 	return nil
 }
-
