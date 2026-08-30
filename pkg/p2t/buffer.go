@@ -59,7 +59,7 @@ func CalculateBufferMetrics(cap float64, replenishments []float64) (BufferMetric
 	}
 
 	rBar := RoundCurrency(total / float64(len(replenishments)))
-	tcm := RoundPercentage((rBar / cap) * 100.0)
+	tcm := RoundCurrency((rBar / cap) * 100.0)
 
 	return BufferMetrics{
 		AverageReplenishment: rBar,
@@ -69,7 +69,7 @@ func CalculateBufferMetrics(cap float64, replenishments []float64) (BufferMetric
 
 // DiagnoseEfficiency classifica a taxa de consumo media (TCM).
 func DiagnoseEfficiency(tcm float64) (EfficiencyDiagnosis, string) {
-	tcm = RoundPercentage(tcm)
+	tcm = RoundCurrency(tcm)
 	switch {
 	case tcm < ZoneTCMHighThreshold:
 		return HighEfficiency, "Otimizacao de custos de transporte/alimentacao"

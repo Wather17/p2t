@@ -7,20 +7,24 @@ import (
 	"strings"
 )
 
-// RoundCurrency arredonda um valor monetario para exatamente 2 casas decimais (centavos exatos), evitando imprecisoes do IEEE 754.
-func RoundCurrency(val float64) float64 {
+// round2 arredonda um valor para exatamente 2 casas decimais, evitando imprecisoes do IEEE 754.
+// Implementacao unica: RoundCurrency e RoundPercentage delegaam para ela.
+func round2(val float64) float64 {
 	if math.IsNaN(val) || math.IsInf(val, 0) {
 		return 0.0
 	}
 	return math.Round(val*100.0) / 100.0
 }
 
+// RoundCurrency arredonda um valor monetario para exatamente 2 casas decimais (centavos exatos), evitando imprecisoes do IEEE 754.
+func RoundCurrency(val float64) float64 {
+	return round2(val)
+}
+
 // RoundPercentage arredonda um valor percentual para 2 casas decimais.
+// Equivalente matematico de RoundCurrency (ambos arredondam em 2 casas); mantido apenas por semantica.
 func RoundPercentage(val float64) float64 {
-	if math.IsNaN(val) || math.IsInf(val, 0) {
-		return 0.0
-	}
-	return math.Round(val*100.0) / 100.0
+	return round2(val)
 }
 
 // ParseBrazilianFloat converte strings contendo formatos numericos flexiveis/brasileiros (ex: "R$ 5.000,50", "5000,50", "5000.50") em float64.
