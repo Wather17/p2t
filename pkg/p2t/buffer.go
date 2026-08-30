@@ -71,11 +71,11 @@ func CalculateBufferMetrics(cap float64, replenishments []float64) (BufferMetric
 func DiagnoseEfficiency(tcm float64) (EfficiencyDiagnosis, string) {
 	tcm = RoundPercentage(tcm)
 	switch {
-	case tcm < 45.0:
+	case tcm < ZoneTCMHighThreshold:
 		return HighEfficiency, "Otimizacao de custos de transporte/alimentacao"
-	case tcm >= 45.0 && tcm <= 55.0:
+	case tcm >= ZoneTCMHighThreshold && tcm <= ZoneTCMAlertThreshold:
 		return StableEfficiency, "Alinhada às estimativas de projeto"
-	case tcm > 55.0 && tcm <= 60.0:
+	case tcm > ZoneTCMAlertThreshold && tcm <= ZoneTCMAnomalyThreshold:
 		return AlertEfficiency, "Atencao: Consumo proximo do limite critico"
 	default:
 		return ConsumptionAnomaly, "Requer auditoria pontual do extrato bancario"
