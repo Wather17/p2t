@@ -82,6 +82,105 @@ func TestTelemetryCmd_WithSchedule(t *testing.T) {
 	}
 }
 
+func TestTelemetryCmd_ScheduleRequiresDailyCommute(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "160",
+		"-W", "5x2",
+	})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatalf("esperado erro ao informar -W sem -D")
+	}
+	if !strings.Contains(err.Error(), "a escala --schedule requer --daily-commute > 0") {
+		t.Errorf("mensagem de erro inesperada: %v", err)
+	}
+	if strings.Contains(buf.String(), "Carga Horaria Total") {
+		t.Errorf("nenhuma linha de resultado deveria ser impressa: %s", buf.String())
+	}
+}
+
+func TestTelemetryCmd_ScheduleWithZeroDailyCommute(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "160",
+		"-W", "5x2",
+		"-D", "0",
+	})
+
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatalf("esperado erro com -W e -D 0")
+	}
+	if !strings.Contains(err.Error(), "a escala --schedule requer --daily-commute > 0") {
+		t.Errorf("mensagem de erro inesperada: %v", err)
+	}
+}
+
+func TestTelemetryCmd_ScheduleOverridesManualCommute(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "160",
+		"-W", "5x2",
+		"-D", "1.5",
+		"-d", "99",
+	})
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("erro ao executar comando telemetry com escala + commute manual: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Aviso: HD calculado via escala sobrescreve --commute-hours (99.00h informado; 33.00h calculado)") {
+		t.Errorf("aviso de sobrescrita nao encontrado: %s", out)
+	}
+	if !strings.Contains(out, "Escala de Trabalho: 5x2 (HD calculado: 33.00 h/mês)") {
+		t.Errorf("HD calculado via escala deveria prevalecer: %s", out)
+	}
+}
+
+func TestTelemetryCmd_ManualCommuteUnchanged(t *testing.T) {
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{
+		"telemetry",
+		"--no-save",
+		"-s", "5000",
+		"-f", "800",
+		"-H", "160",
+		"-d", "40",
+	})
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("erro ao executar comando telemetry com -d apenas: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Carga Horaria Total (HT): 200.00 h") {
+		t.Errorf("comportamento manual inalterado esperado: %s", out)
+	}
+}
+
 func TestTelemetryCmd_WithExactShiftRefDate(t *testing.T) {
 	rootCmd := cmd.NewRootCmd()
 	buf := new(bytes.Buffer)
