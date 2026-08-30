@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -19,6 +20,9 @@ const (
 // OpenDB abre ou cria uma conexao com o banco SQLite no caminho fornecido (ou em memoria se path == ":memory:").
 // O diretorio de dados padrao (~/.p2t) e criado com permissao 0700 e o arquivo de banco e restringido a 0600,
 // corrigindo de forma idempotente bancos legados criados com permissao aberta.
+//
+// Bancos em arquivo abrem com busy_timeout(5000) (espera ate 5s em vez de falhar com "database is locked"
+// no uso concorrente, ex.: TUI mais CLI em terminais distintos) e journal_mode(WAL).
 func OpenDB(dbPath string) (*sql.DB, error) {
 	if dbPath == "" {
 		home, err := os.UserHomeDir()
@@ -32,7 +36,15 @@ func OpenDB(dbPath string) (*sql.DB, error) {
 		dbPath = filepath.Join(dir, "p2t.db")
 	}
 
-	db, err := sql.Open("sqlite", dbPath)
+	dsn := dbPath
+	if dbPath != ":memory:" {
+		q := url.Values{}
+		q.Add("_pragma", "busy_timeout(5000)")
+		q.Add("_pragma", "journal_mode(WAL)")
+		dsn = dbPath + "?" + q.Encode()
+	}
+
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("falha ao abrir banco sqlite em %s: %w", dbPath, err)
 	}

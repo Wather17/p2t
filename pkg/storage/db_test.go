@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/Wather17/p2t/pkg/storage"
 )
@@ -74,6 +75,71 @@ func TestOpenDB_DefaultDirPermissionsUnix(t *testing.T) {
 	}
 	if got := filePerm(t, filepath.Join(dir, "p2t.db")); got != 0o600 {
 		t.Errorf("permissoes do banco = %o, esperado 600", got)
+	}
+}
+
+func TestOpenDB_BusyTimeoutPragma(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "p2t.db")
+
+	db, err := storage.OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em %s: %v", dbPath, err)
+	}
+	defer db.Close()
+
+	var busyTimeout int
+	if err := db.QueryRow("PRAGMA busy_timeout;").Scan(&busyTimeout); err != nil {
+		t.Fatalf("falha ao consultar PRAGMA busy_timeout: %v", err)
+	}
+	if busyTimeout != 5000 {
+		t.Errorf("busy_timeout = %d, esperado 5000", busyTimeout)
+	}
+
+	var journalMode string
+	if err := db.QueryRow("PRAGMA journal_mode;").Scan(&journalMode); err != nil {
+		t.Fatalf("falha ao consultar PRAGMA journal_mode: %v", err)
+	}
+	if journalMode != "wal" {
+		t.Errorf("journal_mode = %q, esperado \"wal\"", journalMode)
+	}
+}
+
+func TestOpenDB_ConcurrentWritersNoImmediateLock(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "p2t.db")
+
+	db1, err := storage.OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("falha ao abrir conexao 1: %v", err)
+	}
+	defer db1.Close()
+	db2, err := storage.OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("falha ao abrir conexao 2: %v", err)
+	}
+	defer db2.Close()
+
+	tx, err := db1.Begin()
+	if err != nil {
+		t.Fatalf("falha ao iniciar transacao: %v", err)
+	}
+	if _, err := tx.Exec("INSERT INTO buffer_cycles (cap, remaining_balance, invisible_cost) VALUES (300, 180, 120)"); err != nil {
+		t.Fatalf("falha ao inserir na transacao: %v", err)
+	}
+
+	commitDone := make(chan error, 1)
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		commitDone <- tx.Commit()
+	}()
+
+	if _, err := db2.Exec("INSERT INTO buffer_cycles (cap, remaining_balance, invisible_cost) VALUES (300, 180, 120)"); err != nil {
+		t.Errorf("escrita concorrente falhou (esperado esperar o lock e completar): %v", err)
+	}
+
+	if err := <-commitDone; err != nil {
+		t.Fatalf("falha ao commitar transacao: %v", err)
 	}
 }
 
