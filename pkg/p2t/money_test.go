@@ -1,6 +1,7 @@
 package p2t_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/Wather17/p2t/pkg/p2t"
@@ -71,6 +72,25 @@ func TestParseBrazilianFloat_Errors(t *testing.T) {
 	for _, input := range inputs {
 		if _, err := p2t.ParseBrazilianFloat(input); err == nil {
 			t.Errorf("esperado erro para input %s, obtido nil", input)
+		}
+	}
+}
+
+func TestRoundingEquivalence(t *testing.T) {
+	inputs := []float64{20.456, 0.1 + 0.2, 1234.565, 15.5, 7.25, 0.0, -3.1415}
+
+	for _, v := range inputs {
+		if got, want := p2t.RoundCurrency(v), p2t.RoundPercentage(v); got != want {
+			t.Errorf("para input %v: RoundCurrency=%v != RoundPercentage=%v", v, got, want)
+		}
+	}
+
+	for _, v := range []float64{math.NaN(), math.Inf(1)} {
+		if got := p2t.RoundCurrency(v); got != 0.0 {
+			t.Errorf("esperado 0.0 para valor invalido, obtido %v", got)
+		}
+		if got := p2t.RoundPercentage(v); got != 0.0 {
+			t.Errorf("esperado 0.0 para valor invalido, obtido %v", got)
 		}
 	}
 }

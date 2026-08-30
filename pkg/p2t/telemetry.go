@@ -76,7 +76,7 @@ func CalculateCommuteHoursWithRefDate(schedule WorkSchedule, dailyCommuteHours f
 		return 0, 0, err
 	}
 
-	totalHours := RoundPercentage(float64(exactShifts) * dailyCommuteHours)
+	totalHours := RoundCurrency(float64(exactShifts) * dailyCommuteHours)
 	return totalHours, exactShifts, nil
 }
 
@@ -100,7 +100,7 @@ func CalculateCommuteHours(schedule WorkSchedule, dailyCommuteHours float64) (fl
 		return 0, fmt.Errorf("escala de trabalho invalida ou nao suportada: '%s'", schedule)
 	}
 
-	return RoundPercentage(monthlyDays * dailyCommuteHours), nil
+	return RoundCurrency(monthlyDays * dailyCommuteHours), nil
 }
 
 // TelemetryInput engloba as variaveis de um ciclo mensal para telemetria de tempo e retorno.
@@ -144,7 +144,7 @@ func CalculateTelemetry(input TelemetryInput) (TelemetryResult, error) {
 	ht := input.ContractHours + input.CommuteHours
 	sl := RoundCurrency(input.GrossSalary - (input.FixedDeductions + input.ErrorDeductions + input.InvisibleCosts))
 	vrh := RoundCurrency(sl / ht)
-	idt := RoundPercentage(((input.ErrorDeductions + input.InvisibleCosts) / input.GrossSalary) * 100.0)
+	idt := RoundCurrency(((input.ErrorDeductions + input.InvisibleCosts) / input.GrossSalary) * 100.0)
 
 	return TelemetryResult{
 		TotalHours:    ht,
@@ -162,12 +162,12 @@ func CalculateIDT3(idtHistory []float64) (float64, error) {
 	// Considera os 3 ultimos registros
 	recent := idtHistory[len(idtHistory)-3:]
 	sum := recent[0] + recent[1] + recent[2]
-	return RoundPercentage(sum / 3.0), nil
+	return RoundCurrency(sum / 3.0), nil
 }
 
 // EvaluateIDTZone determina a zona de decisao com base no IDT3 ou IDT atual.
 func EvaluateIDTZone(idt3 float64) (IDTZone, string) {
-	idt3 = RoundPercentage(idt3)
+	idt3 = RoundCurrency(idt3)
 	switch {
 	case idt3 < ZoneIDTGreenThreshold:
 		return ZoneGreen, "Estavel / Padrao Operacional"

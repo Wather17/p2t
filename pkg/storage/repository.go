@@ -269,25 +269,25 @@ func (r *Repository) GetTelemetryAnalytics() (TelemetryAnalytics, error) {
 	}
 
 	if n >= 3 {
-		analytics.IDT3 = p2t.RoundPercentage(sum3 / 3.0)
+		analytics.IDT3 = p2t.RoundCurrency(sum3 / 3.0)
 	} else {
-		analytics.IDT3 = p2t.RoundPercentage(sum3 / float64(n))
+		analytics.IDT3 = p2t.RoundCurrency(sum3 / float64(n))
 	}
 
 	count6 := 6
 	if n < 6 {
 		count6 = n
 	}
-	analytics.IDT6 = p2t.RoundPercentage(sum6 / float64(count6))
+	analytics.IDT6 = p2t.RoundCurrency(sum6 / float64(count6))
 
-	analytics.IDT12 = p2t.RoundPercentage(sum12 / float64(n))
+	analytics.IDT12 = p2t.RoundCurrency(sum12 / float64(n))
 
 	// Calcula tendencia do VRH (comparando o ultimo com a media anterior)
 	if n >= 2 {
 		lastVRH := records[n-1].VRH
 		prevVRH := records[n-2].VRH
 		if prevVRH > 0 {
-			analytics.VRHTrendPercent = p2t.RoundPercentage(((lastVRH - prevVRH) / prevVRH) * 100.0)
+			analytics.VRHTrendPercent = p2t.RoundCurrency(((lastVRH - prevVRH) / prevVRH) * 100.0)
 		}
 	}
 
