@@ -173,3 +173,40 @@ func TestOpenDB_CorrectsLegacyPermissionsUnix(t *testing.T) {
 		t.Errorf("permissoes do banco apos correcao = %o, esperado 600", got)
 	}
 }
+
+func TestOpenDB_MigrationV3BufferCompetence(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("teste de permissao Unix indisponivel em windows")
+	}
+
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "p2t.db")
+
+	db, err := storage.OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("falha ao abrir banco: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("falha ao fechar banco: %v", err)
+	}
+
+	db2, err := storage.OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("falha ao reabrir banco (idempotencia): %v", err)
+	}
+	defer db2.Close()
+
+	v, err := storage.GetUserVersion(db2)
+	if err != nil {
+		t.Fatalf("falha ao consultar versao: %v", err)
+	}
+	if v != 3 {
+		t.Errorf("esperado user_version 3, obtido %d", v)
+	}
+
+	var idx string
+	err = db2.QueryRow("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_buffer_reference_month'").Scan(&idx)
+	if err != nil {
+		t.Errorf("indice idx_buffer_reference_month nao encontrado: %v", err)
+	}
+}

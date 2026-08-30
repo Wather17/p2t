@@ -31,6 +31,7 @@ type BufferRecord struct {
 	Cap              float64
 	RemainingBalance float64
 	InvisibleCost    float64
+	ReferenceMonth   string
 	CreatedAt        time.Time
 }
 
@@ -193,13 +194,18 @@ func (r *Repository) GetTelemetryByReferenceMonth(refMonth string) (*TelemetryRe
 	return &rec, nil
 }
 
-// SaveBufferCycle insere um registro de buffer operacional.
-func (r *Repository) SaveBufferCycle(cap, remainingBalance, invisibleCost float64) (int64, error) {
+// SaveBufferCycle insere ou substitui o ciclo do buffer da competencia informada (upsert por reference_month).
+// Registros legados com ” nunca sao sobrescritos (o indice unico e parcial).
+func (r *Repository) SaveBufferCycle(cap, remainingBalance, invisibleCost float64, referenceMonth string) (int64, error) {
 	query := `
-	INSERT INTO buffer_cycles (cap, remaining_balance, invisible_cost)
-	VALUES (?, ?, ?);
+	INSERT INTO buffer_cycles (cap, remaining_balance, invisible_cost, reference_month)
+	VALUES (?, ?, ?, ?)
+	ON CONFLICT(reference_month) WHERE reference_month != '' DO UPDATE SET
+		cap = excluded.cap,
+		remaining_balance = excluded.remaining_balance,
+		invisible_cost = excluded.invisible_cost;
 	`
-	result, err := r.db.Exec(query, cap, remainingBalance, invisibleCost)
+	result, err := r.db.Exec(query, cap, remainingBalance, invisibleCost, referenceMonth)
 	if err != nil {
 		return 0, fmt.Errorf("falha ao salvar ciclo de buffer: %w", err)
 	}

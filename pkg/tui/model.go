@@ -37,8 +37,8 @@ type MainModel struct {
 	activeField   int
 
 	// Campos de entrada Buffer
-	inputCap       textinput.Model
-	inputRemaining textinput.Model
+	inputCap          textinput.Model
+	inputRemaining    textinput.Model
 	activeBufferField int
 
 	// Resultados
@@ -359,7 +359,8 @@ func (m *MainModel) calculateCurrentTab() {
 		m.statusMsg = "Buffer Operacional calculado com sucesso!"
 
 		if m.repo != nil {
-			_, _ = m.repo.SaveBufferCycle(cap, rem, ci)
+			refMonth := time.Now().AddDate(0, -1, 0).Format("2006-01")
+			_, _ = m.repo.SaveBufferCycle(cap, rem, ci, refMonth)
 		}
 	}
 }
@@ -502,4 +503,3 @@ func (m MainModel) viewHistoryTab() string {
 	b.WriteString(m.historyTable.View())
 	return b.String()
 }
-
