@@ -14,6 +14,59 @@ func almostEqual(a, b float64) bool {
 	return math.Abs(a-b) < floatTolerance
 }
 
+func TestRepository_TelemetryChunks(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+	input := p2t.TelemetryInput{
+		GrossSalary:     5000.0,
+		FixedDeductions: 800.0,
+		ErrorDeductions: 200.0,
+		InvisibleCosts:  300.0,
+		ContractHours:   160.0,
+		CommuteHours:    40.0,
+	}
+	res, err := p2t.CalculateTelemetry(input)
+	if err != nil {
+		t.Fatalf("falha ao calcular telemetria: %v", err)
+	}
+
+	const total = 1200
+	for i := 0; i < total; i++ {
+		if _, err := repo.SaveTelemetry(input, res, ""); err != nil {
+			t.Fatalf("falha ao salvar registro %d: %v", i, err)
+		}
+	}
+
+	firstChunk, err := repo.GetTelemetryRecordsChunk(0, 1000)
+	if err != nil {
+		t.Fatalf("falha ao buscar primeiro chunk: %v", err)
+	}
+	if len(firstChunk) != 1000 {
+		t.Fatalf("primeiro chunk esperado com 1000 registros, obtido %d", len(firstChunk))
+	}
+
+	lastID := firstChunk[len(firstChunk)-1].ID
+	secondChunk, err := repo.GetTelemetryRecordsChunk(lastID, 1000)
+	if err != nil {
+		t.Fatalf("falha ao buscar segundo chunk: %v", err)
+	}
+	if len(secondChunk) != total-1000 {
+		t.Fatalf("segundo chunk esperado com %d registros, obtido %d", total-1000, len(secondChunk))
+	}
+
+	all := append(firstChunk, secondChunk...)
+	for i := 1; i < len(all); i++ {
+		if all[i].ID <= all[i-1].ID {
+			t.Errorf("ordem ascendente por id violada no indice %d (%d > %d)", i, all[i-1].ID, all[i].ID)
+		}
+	}
+}
+
 func TestRepository_Telemetry(t *testing.T) {
 	db, err := storage.OpenDB(":memory:")
 	if err != nil {
@@ -224,5 +277,3 @@ func TestRepository_DeleteAndUpdate(t *testing.T) {
 		t.Fatalf("falha ao excluir registro de buffer #%d: %v", bufID, err)
 	}
 }
-
-

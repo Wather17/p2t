@@ -1,6 +1,9 @@
 package storage_test
 
 import (
+	"bytes"
+	"encoding/csv"
+	"encoding/json"
 	"testing"
 
 	"github.com/Wather17/p2t/pkg/p2t"
@@ -100,5 +103,53 @@ func TestExportAndImportCSV(t *testing.T) {
 	rec, err := repo2.GetTelemetryByReferenceMonth("2026-06")
 	if err != nil || rec == nil {
 		t.Fatalf("registro nao encontrado apos importacao CSV: %v", err)
+	}
+}
+
+func TestExportPaginationNoTruncation(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+	input := p2t.TelemetryInput{
+		GrossSalary:     5000.0,
+		FixedDeductions: 800.0,
+		ContractHours:   160.0,
+	}
+	res, _ := p2t.CalculateTelemetry(input)
+
+	const total = 1200
+	for i := 0; i < total; i++ {
+		if _, err := repo.SaveTelemetry(input, res, ""); err != nil {
+			t.Fatalf("falha ao salvar registro %d: %v", i, err)
+		}
+	}
+
+	jsonData, err := storage.ExportTelemetryJSON(repo)
+	if err != nil {
+		t.Fatalf("falha ao exportar JSON: %v", err)
+	}
+	var records []storage.TelemetryRecord
+	if err := json.Unmarshal(jsonData, &records); err != nil {
+		t.Fatalf("falha ao parsear JSON exportado: %v", err)
+	}
+	if len(records) != total {
+		t.Errorf("JSON exportado esperado com %d registros, obtido %d", total, len(records))
+	}
+
+	csvData, err := storage.ExportTelemetryCSV(repo)
+	if err != nil {
+		t.Fatalf("falha ao exportar CSV: %v", err)
+	}
+	reader := csv.NewReader(bytes.NewReader(csvData))
+	rows, err := reader.ReadAll()
+	if err != nil {
+		t.Fatalf("falha ao parsear CSV exportado: %v", err)
+	}
+	if len(rows) != total+1 {
+		t.Errorf("CSV esperado com %d linhas (cabecalho + registros), obtido %d", total+1, len(rows))
 	}
 }
