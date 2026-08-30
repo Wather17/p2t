@@ -74,3 +74,97 @@ func TestRenderProgressBar(t *testing.T) {
 	}
 }
 
+func typeValue(t *testing.T, m tui.MainModel, value string) tui.MainModel {
+	t.Helper()
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(value)})
+	model, ok := updated.(tui.MainModel)
+	if !ok {
+		t.Fatalf("Update retornou tipo inesperado: %T", updated)
+	}
+	return model
+}
+
+func pressKey(t *testing.T, m tui.MainModel, key tea.KeyMsg) tui.MainModel {
+	t.Helper()
+	updated, _ := m.Update(key)
+	model, ok := updated.(tui.MainModel)
+	if !ok {
+		t.Fatalf("Update retornou tipo inesperado: %T", updated)
+	}
+	return model
+}
+
+func fillTelemetryInputs(t *testing.T, m tui.MainModel) tui.MainModel {
+	t.Helper()
+	m = typeValue(t, m, "5000")
+	m = pressKey(t, m, tea.KeyMsg{Type: tea.KeyDown})
+	m = typeValue(t, m, "460")
+	m = pressKey(t, m, tea.KeyMsg{Type: tea.KeyDown})
+	m = typeValue(t, m, "40")
+	m = pressKey(t, m, tea.KeyMsg{Type: tea.KeyDown})
+	m = pressKey(t, m, tea.KeyMsg{Type: tea.KeyDown})
+	return m
+}
+
+func TestMainModel_TelemetrySaveStatus(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+	model := tui.NewMainModel(db)
+	model = fillTelemetryInputs(t, model)
+
+	model = pressKey(t, model, tea.KeyMsg{Type: tea.KeyEnter})
+	if !strings.Contains(model.View(), "salva com sucesso") {
+		t.Errorf("esperado status de sucesso apos primeiro save: %s", model.View())
+	}
+
+	records, err := repo.GetRecentTelemetryRecords(15)
+	if err != nil {
+		t.Fatalf("falha ao consultar registros: %v", err)
+	}
+	if len(records) != 1 {
+		t.Errorf("esperado 1 registro salvo, obtido %d", len(records))
+	}
+
+	// Segunda execucao com o mesmo mes de competencia -> duplicado
+	model = pressKey(t, model, tea.KeyMsg{Type: tea.KeyEnter})
+	if !strings.Contains(model.View(), "já existia") {
+		t.Errorf("esperado status de duplicidade apos segundo save: %s", model.View())
+	}
+
+	records, err = repo.GetRecentTelemetryRecords(15)
+	if err != nil {
+		t.Fatalf("falha ao consultar registros: %v", err)
+	}
+	if len(records) != 1 {
+		t.Errorf("esperado 1 registro apos duplicado (nao sobrescrever), obtido %d", len(records))
+	}
+}
+
+func TestMainModel_TelemetrySaveFailsWithoutDB(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+
+	model := tui.NewMainModel(db)
+	model = fillTelemetryInputs(t, model)
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("falha ao fechar banco: %v", err)
+	}
+
+	model = pressKey(t, model, tea.KeyMsg{Type: tea.KeyEnter})
+	view := model.View()
+	if strings.Contains(view, "salva com sucesso") {
+		t.Errorf("status nao pode afirmar sucesso com banco indisponivel: %s", view)
+	}
+	if !strings.Contains(view, "não foi possível salvar") {
+		t.Errorf("esperado status explicando falha de persistencia: %s", view)
+	}
+}
+

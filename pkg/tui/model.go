@@ -309,13 +309,23 @@ func (m *MainModel) calculateCurrentTab() {
 		}
 
 		m.telemetryResult = &res
-		m.statusMsg = "Telemetria calculada e salva com sucesso!"
 
-		if m.repo != nil {
-			refMonth := time.Now().AddDate(0, -1, 0).Format("2006-01")
-			_, _ = m.repo.SaveTelemetry(input, res, refMonth)
-			m.initHistoryTable()
+		if m.repo == nil {
+			m.statusMsg = "Telemetria calculada; não foi possível salvar (banco indisponível)."
+			return
 		}
+
+		refMonth := time.Now().AddDate(0, -1, 0).Format("2006-01")
+		if _, errSave := m.repo.SaveTelemetry(input, res, refMonth); errSave != nil {
+			if strings.Contains(errSave.Error(), "UNIQUE") {
+				m.statusMsg = fmt.Sprintf("Telemetria calculada. Registro de competência %s já existia; nada sobrescrito.", refMonth)
+			} else {
+				m.statusMsg = fmt.Sprintf("Telemetria calculada; não foi possível salvar: %v", errSave)
+			}
+		} else {
+			m.statusMsg = "Telemetria calculada e salva com sucesso!"
+		}
+		m.initHistoryTable()
 	} else if m.activeTab == tabBuffer {
 		cap, _ := p2t.ParseBrazilianFloat(m.inputCap.Value())
 		rem, _ := p2t.ParseBrazilianFloat(m.inputRemaining.Value())
