@@ -89,13 +89,13 @@ func CalculateCommuteHours(schedule WorkSchedule, dailyCommuteHours float64) (fl
 	var monthlyDays float64
 	switch schedule {
 	case Schedule5x2:
-		monthlyDays = 22.0
+		monthlyDays = ScheduleShiftDays5x2
 	case Schedule6x1:
-		monthlyDays = 26.0
+		monthlyDays = ScheduleShiftDays6x1
 	case Schedule12x36:
-		monthlyDays = 15.0
+		monthlyDays = ScheduleShiftDays12x36
 	case Schedule4x3:
-		monthlyDays = 17.0
+		monthlyDays = ScheduleShiftDays4x3
 	default:
 		return 0, fmt.Errorf("escala de trabalho invalida ou nao suportada: '%s'", schedule)
 	}
@@ -169,9 +169,9 @@ func CalculateIDT3(idtHistory []float64) (float64, error) {
 func EvaluateIDTZone(idt3 float64) (IDTZone, string) {
 	idt3 = RoundPercentage(idt3)
 	switch {
-	case idt3 < 10.0:
+	case idt3 < ZoneIDTGreenThreshold:
 		return ZoneGreen, "Estavel / Padrao Operacional"
-	case idt3 >= 10.0 && idt3 < 15.0:
+	case idt3 >= ZoneIDTGreenThreshold && idt3 < ZoneIDTRedThreshold:
 		return ZoneYellow, "Alerta de Corrosao / Ativar busca passiva de vagas"
 	default:
 		return ZoneRed, "Inviabilidade Financeira / Gatilho de Saida Ativado"
