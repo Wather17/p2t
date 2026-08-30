@@ -87,4 +87,5 @@ $$TCM = \left( \frac{\bar{R}}{T} \right) \times 100$$
 ### 2.3 Diagnóstico de Eficiência
 * **$TCM < 45\%$:** Alta Eficiência (Otimização de custos de transporte/alimentação).
 * **$45\% \le TCM \le 55\%$:** Eficiência Estável (Alinhada às estimativas de projeto).
+* **$55\% < TCM \le 60\%$:** Alerta de Consumo Elevado (atenção ao limite crítico).
 * **$TCM > 60\%$:** Anomalia de Consumo (Requer auditoria pontual do extrato bancário).
