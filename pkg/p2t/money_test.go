@@ -47,6 +47,11 @@ func TestParseBrazilianFloat(t *testing.T) {
 		{"R$5000,50", 5000.50},
 		{"$ 1.250.000,75", 1250000.75},
 		{"160,0", 160.00},
+		{"5.000", 5000.00},
+		{"R$ 5.000", 5000.00},
+		{"1.234.567", 1234567.00},
+		{"10.500", 10500.00},
+		{"0.123", 0.12},
 	}
 
 	for _, tt := range tests {
@@ -56,6 +61,16 @@ func TestParseBrazilianFloat(t *testing.T) {
 		}
 		if got != tt.expected {
 			t.Errorf("para input %s esperado %.2f, obtido %.2f", tt.input, tt.expected, got)
+		}
+	}
+}
+
+func TestParseBrazilianFloat_Errors(t *testing.T) {
+	inputs := []string{"abc", "1,2,3", "R$ 90,xx"}
+
+	for _, input := range inputs {
+		if _, err := p2t.ParseBrazilianFloat(input); err == nil {
+			t.Errorf("esperado erro para input %s, obtido nil", input)
 		}
 	}
 }
