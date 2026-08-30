@@ -46,8 +46,13 @@ func NewTelemetryCmd() *cobra.Command {
 				return fmt.Errorf("--shift-ref-date é exclusivo da escala 12x36 (use: -W 12x36 -R <YYYY-MM-DD>)")
 			}
 
+			if workSchedule != "" && dailyCommute <= 0 {
+				return fmt.Errorf("a escala --schedule requer --daily-commute > 0 (ou remova --schedule)")
+			}
+
 			var exactShiftsCount int
 			if workSchedule != "" && dailyCommute > 0 {
+				manualCommute := commuteHours
 				if shiftRefDate != "" {
 					parsedRef, err := time.Parse("2006-01-02", shiftRefDate)
 					if err != nil {
@@ -65,6 +70,9 @@ func NewTelemetryCmd() *cobra.Command {
 						return err
 					}
 					commuteHours = computedHD
+				}
+				if manualCommute > 0 {
+					fmt.Fprintf(out, "Aviso: HD calculado via escala sobrescreve --commute-hours (%.2fh informado; %.2fh calculado).\n", manualCommute, commuteHours)
 				}
 			}
 

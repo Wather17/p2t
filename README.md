@@ -73,6 +73,8 @@ Calcula o $VRH$, $IDT$, consulta o histórico no SQLite e gera o diagnóstico da
 * `--db`: Caminho do banco SQLite personalizado (padrão: `~/.p2t/p2t.db`).
 * `--no-save`: Executa sem persistir o registro no SQLite.
 
+> **Nota:** a escala `-W/--schedule` (5x2, 6x1, 12x36, 4x3) só tem efeito acompanhada de `-D/--daily-commute > 0`; sem `-D`, o comando falha com erro claro em vez de ignorar a escala. Questões de cálculo exato por calendário e data de referência serão documentadas aqui.
+
 ---
 
 ### 2. Gestão do Buffer Operacional (`p2t buffer`)
