@@ -119,6 +119,38 @@ func (r *Repository) GetRecentTelemetryRecords(limit int) ([]TelemetryRecord, er
 	return records, rows.Err()
 }
 
+// GetTelemetryRecordsChunk retorna ate `limit` registros de telemetria com id > afterID, ordenados por id ASC.
+// Chamadas sucessivas percorrem o historico completo sem limite artificial (paginacao).
+func (r *Repository) GetTelemetryRecordsChunk(afterID int64, limit int) ([]TelemetryRecord, error) {
+	query := `
+	SELECT id, gross_salary, fixed_deductions, error_deductions, invisible_costs,
+	       contract_hours, commute_hours, total_hours, real_liquidity, vrh, idt, reference_month, created_at
+	FROM telemetry_cycles
+	WHERE id > ?
+	ORDER BY id ASC
+	LIMIT ?;
+	`
+	rows, err := r.db.Query(query, afterID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao consultar registros de telemetria paginado: %w", err)
+	}
+	defer rows.Close()
+
+	var records []TelemetryRecord
+	for rows.Next() {
+		var rec TelemetryRecord
+		err := rows.Scan(
+			&rec.ID, &rec.GrossSalary, &rec.FixedDeductions, &rec.ErrorDeductions, &rec.InvisibleCosts,
+			&rec.ContractHours, &rec.CommuteHours, &rec.TotalHours, &rec.RealLiquidity, &rec.VRH, &rec.IDT, &rec.ReferenceMonth, &rec.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, rec)
+	}
+	return records, rows.Err()
+}
+
 // GetLatestTelemetryRecord retorna o registro de telemetria mais recente salvo no banco, se existir.
 func (r *Repository) GetLatestTelemetryRecord() (*TelemetryRecord, error) {
 	query := `
@@ -160,8 +192,6 @@ func (r *Repository) GetTelemetryByReferenceMonth(refMonth string) (*TelemetryRe
 	}
 	return &rec, nil
 }
-
-
 
 // SaveBufferCycle insere um registro de buffer operacional.
 func (r *Repository) SaveBufferCycle(cap, remainingBalance, invisibleCost float64) (int64, error) {
@@ -323,5 +353,3 @@ func (r *Repository) DeleteBufferRecord(id int64) error {
 	}
 	return nil
 }
-
-

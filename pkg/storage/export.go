@@ -10,11 +10,32 @@ import (
 	"github.com/Wather17/p2t/pkg/p2t"
 )
 
+// exportChunkSize define o tamanho de cada lote de leitura paginada no export.
+const exportChunkSize = 1000
+
+// GetAllTelemetryRecords percorre o historico completo com paginacao por id (chunkSize) e retorna tudo em ordem ascendente.
+func GetAllTelemetryRecords(repo *Repository) ([]TelemetryRecord, error) {
+	var records []TelemetryRecord
+	afterID := int64(0)
+	for {
+		chunk, err := repo.GetTelemetryRecordsChunk(afterID, exportChunkSize)
+		if err != nil {
+			return nil, fmt.Errorf("falha ao obter registros para exportar: %w", err)
+		}
+		records = append(records, chunk...)
+		if len(chunk) < exportChunkSize {
+			break
+		}
+		afterID = chunk[len(chunk)-1].ID
+	}
+	return records, nil
+}
+
 // ExportTelemetryJSON exporta todos os registros de telemetria para o formato JSON.
 func ExportTelemetryJSON(repo *Repository) ([]byte, error) {
-	records, err := repo.GetRecentTelemetryRecords(10000)
+	records, err := GetAllTelemetryRecords(repo)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao obter registros para exportar: %w", err)
+		return nil, err
 	}
 
 	data, err := json.MarshalIndent(records, "", "  ")
@@ -27,9 +48,9 @@ func ExportTelemetryJSON(repo *Repository) ([]byte, error) {
 
 // ExportTelemetryCSV exporta todos os registros de telemetria para o formato CSV.
 func ExportTelemetryCSV(repo *Repository) ([]byte, error) {
-	records, err := repo.GetRecentTelemetryRecords(10000)
+	records, err := GetAllTelemetryRecords(repo)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao obter registros para exportar: %w", err)
+		return nil, err
 	}
 
 	var buf bytes.Buffer
