@@ -151,7 +151,14 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
+			return m, tea.Quit
+		case "q":
+			// Durante a digitacao em um campo (abas com formulario), 'q' e um caractere normal:
+			// deixa a tecla cair no roteamento de inputs abaixo. Sem input focado, encerra.
+			if m.activeTab != tabHistory {
+				break // cai para o routing (que processa o texto no campo focado)
+			}
 			return m, tea.Quit
 		case "1":
 			m.activeTab = tabTelemetry

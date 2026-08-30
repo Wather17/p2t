@@ -211,3 +211,42 @@ func TestMainModel_CommutePrefillFractional(t *testing.T) {
 	}
 }
 
+func TestMainModel_QKeyDuringTyping(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	model := tui.NewMainModel(db)
+
+	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	if cmd != nil {
+		t.Fatalf("tecla q com input focado nao pode encerrar a TUI (cmd: %v)", cmd)
+	}
+	if !strings.Contains(model.View(), "q") {
+		t.Errorf("esperado tecla q digitada no campo focado: %s", model.View())
+	}
+}
+
+func TestMainModel_QKeyQuitsWithoutInput(t *testing.T) {
+	db, err := storage.OpenDB(":memory:")
+	if err != nil {
+		t.Fatalf("falha ao abrir banco em memoria: %v", err)
+	}
+	defer db.Close()
+
+	model := tui.NewMainModel(db)
+	model = pressKey(t, model, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}) // aba Historico, sem input
+
+	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	if cmd == nil {
+		t.Errorf("esperado Quit com tecla q sem input focado")
+	}
+
+	_, cmdCtrlC := model.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if cmdCtrlC == nil {
+		t.Errorf("esperado Quit com ctrl+c em qualquer estado")
+	}
+}
+
