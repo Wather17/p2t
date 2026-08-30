@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/Wather17/p2t/pkg/p2t"
 )
@@ -95,15 +96,31 @@ func ExportTelemetryCSV(repo *Repository) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// ImportResult descreve o resultado de uma importacao: o que entrou, foi pulado por duplicidade ou falhou,
+// com motivos resumidos para o usuario.
+type ImportResult struct {
+	Inserted   int
+	Duplicated int
+	Failed     int
+	Why        []string
+}
+
+func (r *ImportResult) why(reason string) {
+	if len(r.Why) < 10 {
+		r.Why = append(r.Why, reason)
+	}
+}
+
 // ImportTelemetryJSON importa registros de telemetria a partir de um JSON.
-func ImportTelemetryJSON(repo *Repository, data []byte) (int, error) {
+// Nenhuma linha e contabilizada sem motivo: as causas de falha entram em Why (limitado a 10).
+func ImportTelemetryJSON(repo *Repository, data []byte) (ImportResult, error) {
 	var records []TelemetryRecord
 	if err := json.Unmarshal(data, &records); err != nil {
-		return 0, fmt.Errorf("falha ao decodificar JSON de telemetria: %w", err)
+		return ImportResult{}, fmt.Errorf("falha ao decodificar JSON de telemetria: %w", err)
 	}
 
-	imported := 0
-	for _, r := range records {
+	result := ImportResult{}
+	for i, r := range records {
 		input := p2t.TelemetryInput{
 			GrossSalary:     r.GrossSalary,
 			FixedDeductions: r.FixedDeductions,
@@ -114,6 +131,8 @@ func ImportTelemetryJSON(repo *Repository, data []byte) (int, error) {
 		}
 		res, err := p2t.CalculateTelemetry(input)
 		if err != nil {
+			result.Failed++
+			result.why(fmt.Sprintf("registro [%d]: %v", i, err))
 			continue
 		}
 
@@ -122,59 +141,92 @@ func ImportTelemetryJSON(repo *Repository, data []byte) (int, error) {
 			ref = r.CreatedAt.Format("2006-01")
 		}
 
-		if _, err := repo.SaveTelemetry(input, res, ref); err == nil {
-			imported++
+		if _, err := repo.SaveTelemetry(input, res, ref); err != nil {
+			if strings.Contains(err.Error(), "UNIQUE") {
+				result.Duplicated++
+				result.why(fmt.Sprintf("registro [%d]: competência %s já existe no banco", i, ref))
+			} else {
+				result.Failed++
+				result.why(fmt.Sprintf("registro [%d]: %v", i, err))
+			}
+			continue
 		}
+		result.Inserted++
 	}
 
-	return imported, nil
+	return result, nil
 }
 
 // ImportTelemetryCSV importa registros de telemetria a partir de um CSV.
-func ImportTelemetryCSV(repo *Repository, data []byte) (int, error) {
+// Linhas curtas ou com numeros malformados contam como Failed com o numero da linha e nada e inserido delas.
+func ImportTelemetryCSV(repo *Repository, data []byte) (ImportResult, error) {
 	reader := csv.NewReader(bytes.NewReader(data))
+	reader.FieldsPerRecord = -1
 	rows, err := reader.ReadAll()
 	if err != nil {
-		return 0, fmt.Errorf("falha ao ler CSV de telemetria: %w", err)
+		return ImportResult{}, fmt.Errorf("falha ao ler CSV de telemetria: %w", err)
 	}
 
 	if len(rows) < 2 {
-		return 0, nil
+		return ImportResult{}, nil
 	}
 
-	imported := 0
+	result := ImportResult{}
 	// Pula cabeçalho (linha 0)
-	for _, row := range rows[1:] {
-		if len(row) < 12 {
+	for i, row := range rows[1:] {
+		line := i + 2
+		if len(row) < 13 {
+			result.Failed++
+			result.why(fmt.Sprintf("linha %d: esperadas 13 colunas, obtidas %d", line, len(row)))
 			continue
 		}
 
 		refMonth := row[1]
-		grossSalary, _ := strconv.ParseFloat(row[2], 64)
-		fixedDeductions, _ := strconv.ParseFloat(row[3], 64)
-		errorDeductions, _ := strconv.ParseFloat(row[4], 64)
-		invisibleCosts, _ := strconv.ParseFloat(row[5], 64)
-		contractHours, _ := strconv.ParseFloat(row[6], 64)
-		commuteHours, _ := strconv.ParseFloat(row[7], 64)
+		vals := []float64{}
+		fields := []string{row[2], row[3], row[4], row[5], row[6], row[7]}
+		parseErr := false
+		for _, f := range fields {
+			v, err := strconv.ParseFloat(strings.TrimSpace(f), 64)
+			if err != nil {
+				parseErr = true
+				break
+			}
+			vals = append(vals, v)
+		}
+		if parseErr {
+			result.Failed++
+			result.why(fmt.Sprintf("linha %d: campo numerico malformado", line))
+			continue
+		}
 
 		input := p2t.TelemetryInput{
-			GrossSalary:     grossSalary,
-			FixedDeductions: fixedDeductions,
-			ErrorDeductions: errorDeductions,
-			InvisibleCosts:  invisibleCosts,
-			ContractHours:   contractHours,
-			CommuteHours:    commuteHours,
+			GrossSalary:     vals[0],
+			FixedDeductions: vals[1],
+			ErrorDeductions: vals[2],
+			InvisibleCosts:  vals[3],
+			ContractHours:   vals[4],
+			CommuteHours:    vals[5],
 		}
 
 		res, err := p2t.CalculateTelemetry(input)
 		if err != nil {
+			result.Failed++
+			result.why(fmt.Sprintf("linha %d: %v", line, err))
 			continue
 		}
 
-		if _, err := repo.SaveTelemetry(input, res, refMonth); err == nil {
-			imported++
+		if _, err := repo.SaveTelemetry(input, res, refMonth); err != nil {
+			if strings.Contains(err.Error(), "UNIQUE") {
+				result.Duplicated++
+				result.why(fmt.Sprintf("linha %d: competência %s já existe no banco", line, refMonth))
+			} else {
+				result.Failed++
+				result.why(fmt.Sprintf("linha %d: %v", line, err))
+			}
+			continue
 		}
+		result.Inserted++
 	}
 
-	return imported, nil
+	return result, nil
 }

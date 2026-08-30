@@ -106,3 +106,38 @@ func TestExportCLI_Stdout(t *testing.T) {
 		t.Errorf("saida CSV esperada em stdout nao encontrada: %s", out)
 	}
 }
+
+func TestImportCLI_WithFailures(t *testing.T) {
+	tempDir := t.TempDir()
+	dbFile := filepath.Join(tempDir, "db.db")
+	importFile := filepath.Join(tempDir, "import.json")
+
+	data := []byte(`[
+		{"ID":1,"ReferenceMonth":"2026-05","GrossSalary":5000,"FixedDeductions":800,"ErrorDeductions":0,"InvisibleCosts":0,"ContractHours":160,"CommuteHours":40,"CreatedAt":"2026-05-01T10:00:00Z"},
+		{"ID":2,"ReferenceMonth":"2026-05","GrossSalary":5000,"FixedDeductions":800,"ErrorDeductions":0,"InvisibleCosts":0,"ContractHours":160,"CommuteHours":40,"CreatedAt":"2026-05-01T10:00:00Z"},
+		{"ID":3,"ReferenceMonth":"2026-06","GrossSalary":0,"FixedDeductions":0,"ErrorDeductions":0,"InvisibleCosts":0,"ContractHours":160,"CommuteHours":40,"CreatedAt":"2026-06-01T10:00:00Z"}
+	]`)
+	if err := os.WriteFile(importFile, data, 0o600); err != nil {
+		t.Fatalf("falha ao gravar arquivo de importacao: %v", err)
+	}
+
+	rootCmd := cmd.NewRootCmd()
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"import", "-F", importFile, "--db", dbFile})
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("erro ao executar import: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "1 registro(s) inserido(s)") {
+		t.Errorf("esperado resumo de inseridos: %s", out)
+	}
+	if !strings.Contains(out, "1 duplicado(s) ignorado(s)") {
+		t.Errorf("esperado resumo de duplicados: %s", out)
+	}
+	if !strings.Contains(out, "1 falha(s)") {
+		t.Errorf("esperado resumo de falhas: %s", out)
+	}
+}
