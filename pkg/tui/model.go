@@ -369,7 +369,7 @@ func (m MainModel) View() string {
 	var b strings.Builder
 
 	// Titulo do App
-	b.WriteString(AppTitleStyle.Render("p2t - Pay to Work Framework (TUI)"))
+	b.WriteString(AppTitleStyle.Render("p2t - Cockpit Financeiro (TUI)"))
 	b.WriteString("\n\n")
 
 	// Barra de Abas

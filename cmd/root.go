@@ -9,9 +9,9 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "p2t",
-	Short: "p2t (Pay to Work) - Telemetria de Eficiência de Trabalho",
-	Long: `p2t é uma ferramenta CLI/TUI para mensurar o retorno real do tempo investido no trabalho (VRH e IDT) 
-e gerenciar por exceção os custos invisíveis com o Buffer Operacional (A Caixinha).`,
+	Short: "p2t (Pay to Work) - Organização Financeira por Exceção",
+	Long: `p2t é uma ferramenta CLI/TUI de organização financeira por exceção: acompanha fechamentos mensais, metas,
+compromissos recorrentes e a viabilidade econômica do trabalho.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Se executado apenas como 'p2t', abre a TUI por padrao
 		tuiCmd := NewTUICmd()
@@ -31,9 +31,9 @@ func Execute() {
 func NewRootCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "p2t",
-		Short: "p2t (Pay to Work) - Telemetria de Eficiência de Trabalho",
-		Long: `p2t é uma ferramenta CLI/TUI para mensurar o retorno real do tempo investido no trabalho (VRH e IDT) 
-e gerenciar por exceção os custos invisíveis com o Buffer Operacional (A Caixinha).`,
+		Short: "p2t (Pay to Work) - Organização Financeira por Exceção",
+		Long: `p2t é uma ferramenta CLI/TUI de organização financeira por exceção: acompanha fechamentos mensais, metas,
+compromissos recorrentes e a viabilidade econômica do trabalho.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tuiCmd := NewTUICmd()
 			return tuiCmd.RunE(tuiCmd, args)
@@ -48,6 +48,9 @@ e gerenciar por exceção os custos invisíveis com o Buffer Operacional (A Caix
 	c.AddCommand(NewDeleteRecordCmd())
 	c.AddCommand(NewExportCmd())
 	c.AddCommand(NewImportCmd())
+	c.AddCommand(NewGoalCmd())
+	c.AddCommand(NewRecurringCmd())
+	c.AddCommand(NewCloseCmd())
 	return c
 }
 
@@ -61,4 +64,7 @@ func init() {
 	rootCmd.AddCommand(NewDeleteRecordCmd())
 	rootCmd.AddCommand(NewExportCmd())
 	rootCmd.AddCommand(NewImportCmd())
+	rootCmd.AddCommand(NewGoalCmd())
+	rootCmd.AddCommand(NewRecurringCmd())
+	rootCmd.AddCommand(NewCloseCmd())
 }

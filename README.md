@@ -1,8 +1,10 @@
 # p2t (Pay to Work)
 
-> **Modelagem Matemática e Telemetria de Eficiência de Trabalho**
+> **Organização Financeira por Exceção e Viabilidade de Renda**
 
-O **p2t** é um sistema de telemetria e gestão de eficiência de trabalho focado em método. Ao contrário dos aplicativos tradicionais de organização financeira focados em registros exaustivos de despesas, o **p2t** utiliza princípios matemáticos dedutivos para mensurar o **retorno real do tempo investido** e gerenciar por exceção os **custos invisíveis operacionais**.
+O **p2t** é um cockpit financeiro pessoal baseado em fechamentos mensais, metas, reservas e compromissos recorrentes. Ao contrário dos aplicativos tradicionais de organização financeira focados em registrar cada despesa, o p2t usa o extrato como fonte de detalhe e acompanha apenas decisões, exceções e sinais importantes.
+
+A filosofia completa está em [docs/manifesto.md](docs/manifesto.md). A análise do trabalho continua existindo como um módulo para medir o retorno real da renda e perceber quando pode ser necessário planejar uma mudança.
 
 ---
 
@@ -10,7 +12,7 @@ O **p2t** é um sistema de telemetria e gestão de eficiência de trabalho focad
 
 A documentação matemática completa com a dedução das equações está disponível em [docs/specification.md](docs/specification.md).
 
-### Principais Métricas
+### Principais Métricas do Trabalho
 
 1. **VRH (Valor Real da Hora Dedicada)**: Retorno financeiro real por hora de vida dedicada ao trabalho (incluindo tempo de deslocamento).
    $$VRH = \frac{S_B - (D_F + D_E + C_I)}{H_C + H_D}$$
@@ -21,10 +23,18 @@ A documentação matemática completa com a dedução das equações está dispo
 3. **Matriz de Decisão ($\overline{IDT}_3$)**: Média móvel de 3 meses do IDT para avaliação de viabilidade laboral:
    * **$\overline{IDT}_3 < 10\%$**: **Zona Verde** (Estável / Padrão Operacional).
    * **$10\% \le \overline{IDT}_3 < 15\%$**: **Zona Amarela** (Alerta de Corrosão / Ativar busca passiva de vagas).
-   * **$\overline{IDT}_3 \ge 15\%$**: **Zona Vermelha** (Inviabilidade Financeira / Gatilho de Saída Ativado).
+   * **$\overline{IDT}_3 \ge 15\%$**: **Zona Vermelha** (Corrosão elevada / considerar um plano de saída).
 
 4. **Buffer Operacional / A Caixinha ($TCM$)**: Gestão por exceção do buffer de liquidez para custos de permanência e transporte.
    $$TCM = \left( \frac{\bar{R}}{T} \right) \times 100$$
+
+### Fechamento Financeiro
+
+O fechamento mensal não exige o registro de cada transação. Ele calcula a capacidade de financiar metas e a margem livre:
+
+$$\text{Capacidade de Metas} = \text{Renda Recebida} - \text{Compromissos Recorrentes}$$
+
+$$\text{Margem Livre} = \text{Capacidade de Metas} - \text{Aportes Planejados} - \text{Custos Excepcionais}$$
 
 ---
 
@@ -112,6 +122,49 @@ Calcula os custos invisíveis reais ($C_I$), atualiza o histórico e gera o diag
 ```bash
 ./bin/p2t version
 ```
+
+### 4. Metas Financeiras (`p2t goal`)
+
+Metas são acompanhadas por valor-alvo, prazo, saldo atual e aporte mensal planejado:
+
+```bash
+./bin/p2t goal add \
+  --name "Reserva de emergência" \
+  --target 10000 \
+  --deadline 2027-12 \
+  --balance 2500 \
+  --monthly-contribution 500
+
+./bin/p2t goal list
+```
+
+### 5. Compromissos Recorrentes (`p2t recurring`)
+
+Assinaturas, parcelas, seguros e mensalidades são cadastrados sem lançar cada cobrança:
+
+```bash
+./bin/p2t recurring add \
+  --name "Serviço de música" \
+  --amount 25 \
+  --period monthly \
+  --purpose life \
+  --essentiality discretionary \
+  --billing-day 10
+
+./bin/p2t recurring list
+```
+
+Periodicidades anuais são convertidas automaticamente para equivalente mensal.
+
+### 6. Fechamento Financeiro (`p2t close`)
+
+O comando guiado consolida renda, reservas, metas, compromissos e exceções. Também resume a telemetria trabalhista da mesma competência quando existir:
+
+```bash
+./bin/p2t close --interactive --reference-month 2026-08
+```
+
+O mesmo mês pode ser fechado novamente; o resumo anterior é atualizado em vez de duplicado.
 
 ---
 

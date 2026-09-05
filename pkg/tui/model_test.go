@@ -20,7 +20,7 @@ func TestMainModel_Render(t *testing.T) {
 	model := tui.NewMainModel(db)
 	view := model.View()
 
-	if !strings.Contains(view, "p2t - Pay to Work Framework (TUI)") {
+	if !strings.Contains(view, "p2t - Cockpit Financeiro (TUI)") {
 		t.Errorf("titulo da TUI nao encontrado na renderizacao: %s", view)
 	}
 	if !strings.Contains(view, "1. Telemetria de Retorno") {
@@ -249,4 +249,3 @@ func TestMainModel_QKeyQuitsWithoutInput(t *testing.T) {
 		t.Errorf("esperado Quit com ctrl+c em qualquer estado")
 	}
 }
-

@@ -1,7 +1,9 @@
 # Specification: Framework p2t (Pay to Work)
-**Modelagem Matemática e Telemetria de Eficiência de Trabalho**
+**Organização Financeira por Exceção e Viabilidade de Renda**
 
-Esta documentação formaliza a fundamentação matemática do projeto `p2t`, utilizando o **método dedutivo direto** para mensurar o retorno real do tempo investido e detectar perdas financeiras operacionais no ambiente de trabalho.
+O manifesto em [docs/manifesto.md](manifesto.md) define a filosofia geral do produto. Esta documentação formaliza os módulos matemáticos do projeto `p2t`, utilizando o **método dedutivo direto** para organizar a vida financeira por exceção e mensurar o retorno real do tempo investido no trabalho.
+
+O fechamento financeiro mensal calcula a capacidade de metas e a margem livre a partir da renda recebida, dos compromissos recorrentes e das exceções do período. As equações abaixo permanecem como o módulo de viabilidade da renda trabalhista, não como a definição inteira do produto.
 
 ---
 
@@ -85,7 +87,7 @@ $$\overline{IDT}_3 = \frac{\sum_{i=0}^{2} IDT_{t-i}}{3}$$
 
 * **$\overline{IDT}_3 < 10\%$:** Zona Verde (Estável / Padrão Operacional).
 * **$10\% \le \overline{IDT}_3 < 15\%$:** Zona Amarela (Alerta de Corrosão / Ativar busca passiva de vagas).
-* **$\overline{IDT}_3 \ge 15\%$:** Zona Vermelha (Inviabilidade Financeira / Gatilho de Saída Ativado).
+* **$\overline{IDT}_3 \ge 15\%$:** Zona Vermelha (Corrosão elevada / considerar um plano de saída).
 
 ---
 

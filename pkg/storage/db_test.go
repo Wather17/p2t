@@ -174,7 +174,7 @@ func TestOpenDB_CorrectsLegacyPermissionsUnix(t *testing.T) {
 	}
 }
 
-func TestOpenDB_MigrationV3BufferCompetence(t *testing.T) {
+func TestOpenDB_MigrationV4FinancialCockpit(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("teste de permissao Unix indisponivel em windows")
 	}
@@ -200,13 +200,21 @@ func TestOpenDB_MigrationV3BufferCompetence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("falha ao consultar versao: %v", err)
 	}
-	if v != 3 {
-		t.Errorf("esperado user_version 3, obtido %d", v)
+	if v != 4 {
+		t.Errorf("esperado user_version 4, obtido %d", v)
 	}
 
 	var idx string
 	err = db2.QueryRow("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_buffer_reference_month'").Scan(&idx)
 	if err != nil {
 		t.Errorf("indice idx_buffer_reference_month nao encontrado: %v", err)
+	}
+
+	for _, table := range []string{"goals", "recurring_commitments", "financial_snapshots", "goal_snapshot_progress"} {
+		var name string
+		err := db2.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&name)
+		if err != nil {
+			t.Errorf("tabela %s nao encontrada: %v", table, err)
+		}
 	}
 }

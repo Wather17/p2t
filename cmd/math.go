@@ -21,7 +21,7 @@ func NewMathCmd() *cobra.Command {
 			var b strings.Builder
 
 			// Banner Principal
-			b.WriteString(tui.AppTitleStyle.Render("p2t - Fundamentação Matemática & Método Dedutivo"))
+			b.WriteString(tui.AppTitleStyle.Render("p2t - Organização Financeira & Método Dedutivo"))
 			b.WriteString("\n\n")
 
 			// Secao 1: Glossario de Incognitas
@@ -48,7 +48,18 @@ func NewMathCmd() *cobra.Command {
 			b.WriteString(tui.FormBoxStyle.Render(section1))
 			b.WriteString("\n\n")
 
-			// Secao 2: Equacoes Principais
+			financeSection := fmt.Sprintf(
+				"%s\n\n"+
+					"  Capacidade de Metas = Renda Recebida - Compromissos Recorrentes\n"+
+					"  Margem Livre = Capacidade de Metas - Aportes Planejados - Custos Excepcionais\n\n"+
+					"  O fechamento mensal acompanha decisões e exceções; o extrato continua guardando\n"+
+					"  o detalhe de cada transação.\n",
+				tui.MetricLabelStyle.Render("=== 2. ORGANIZAÇÃO FINANCEIRA POR EXCEÇÃO ==="),
+			)
+			b.WriteString(tui.FormBoxStyle.Render(financeSection))
+			b.WriteString("\n\n")
+
+			// Secao 3: Equacoes Principais
 			section2 := fmt.Sprintf(
 				"%s\n\n"+
 					"%s (Valor Real da Hora Dedicada):\n"+
@@ -60,7 +71,7 @@ func NewMathCmd() *cobra.Command {
 					"%s (Taxa de Consumo Média do Buffer/Caixinha):\n"+
 					"  TCM = (R_bar / T) * 100\n"+
 					"  Proporção de utilização do teto (T) pela média de reposições (R_bar).\n",
-				tui.MetricLabelStyle.Render("=== 2. EQUAÇÕES FUNDAMENTAIS ==="),
+				tui.MetricLabelStyle.Render("=== 3. EQUAÇÕES FUNDAMENTAIS ==="),
 				tui.MetricMathStyle.Render("VRH"),
 				tui.MetricMathStyle.Render("IDT"),
 				tui.MetricMathStyle.Render("TCM"),
@@ -68,13 +79,13 @@ func NewMathCmd() *cobra.Command {
 			b.WriteString(tui.FormBoxStyle.Render(section2))
 			b.WriteString("\n\n")
 
-			// Secao 3: Matriz de Decisao
+			// Secao 4: Matriz de Decisao
 			section3 := fmt.Sprintf(
 				"%s\n\n"+
 					"%s  IDT3 < 10%%   : Estável / Padrão Operacional Mantido.\n"+
 					"%s IDT3 10-15%% : Alerta de Corrosão / Ativar Busca Passiva de Vagas.\n"+
-					"%s    IDT3 >= 15%%  : Inviabilidade Financeira / Gatilho de Saída Ativado.\n",
-				tui.MetricLabelStyle.Render("=== 3. MATRIZ DE DECISÃO (MÉDIA MÓVEL IDT3) ==="),
+					"%s    IDT3 >= 15%%  : Corrosão elevada / considerar um plano de saída.\n",
+				tui.MetricLabelStyle.Render("=== 4. MATRIZ DE DECISÃO (MÉDIA MÓVEL IDT3) ==="),
 				tui.BadgeGreenStyle.Render("ZONA VERDE"),
 				tui.BadgeYellowStyle.Render("ZONA AMARELA"),
 				tui.BadgeRedStyle.Render("ZONA VERMELHA"),
@@ -82,7 +93,7 @@ func NewMathCmd() *cobra.Command {
 			b.WriteString(tui.ResultBoxStyle.Render(section3))
 			b.WriteString("\n\n")
 
-			// Secao 4: Exemplo Resolvido
+			// Secao 5: Exemplo Resolvido
 			exampleBox := lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(tui.GreenSecondary).
@@ -97,7 +108,7 @@ func NewMathCmd() *cobra.Command {
 							"  SL = 5000 - (800 + 200) = R$ 4.000,00\n"+
 							"  VRH = 4000 / 193 = %s\n"+
 							"  IDT = (200 / 5000) * 100 = %s -> %s\n",
-						tui.MetricLabelStyle.Render("=== 4. EXEMPLO PRÁTICO RESOLVIDO ==="),
+						tui.MetricLabelStyle.Render("=== 5. EXEMPLO PRÁTICO RESOLVIDO ==="),
 						tui.MetricMathStyle.Render("R$ 20.73 / h"),
 						tui.MetricMoneyStyle.Render("4.00%"),
 						tui.BadgeGreenStyle.Render("Zona Verde"),

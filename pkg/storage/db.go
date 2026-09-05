@@ -111,6 +111,61 @@ var migrations = []migration{
 		CREATE UNIQUE INDEX IF NOT EXISTS idx_buffer_reference_month ON buffer_cycles(reference_month) WHERE reference_month != '';
 		`,
 	},
+	{
+		version: 4,
+		stmt: `
+		CREATE TABLE IF NOT EXISTS goals (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			target_amount REAL NOT NULL,
+			deadline TEXT NOT NULL,
+			current_balance REAL NOT NULL DEFAULT 0,
+			monthly_contribution REAL NOT NULL DEFAULT 0,
+			archived INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS recurring_commitments (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			amount REAL NOT NULL,
+			period TEXT NOT NULL,
+			purpose TEXT NOT NULL,
+			essentiality TEXT NOT NULL,
+			billing_day INTEGER NOT NULL DEFAULT 0,
+			status TEXT NOT NULL DEFAULT 'active',
+			last_reviewed TEXT NOT NULL DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS financial_snapshots (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			reference_month TEXT NOT NULL UNIQUE,
+			received_income REAL NOT NULL,
+			reserve_balance REAL NOT NULL,
+			planned_goal_contributions REAL NOT NULL,
+			exceptional_costs REAL NOT NULL,
+			recurring_commitment_total REAL NOT NULL,
+			goal_capacity REAL NOT NULL,
+			free_margin REAL NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS goal_snapshot_progress (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			snapshot_id INTEGER NOT NULL,
+			goal_id INTEGER NOT NULL,
+			current_balance REAL NOT NULL,
+			planned_contribution REAL NOT NULL,
+			UNIQUE(snapshot_id, goal_id),
+			FOREIGN KEY(snapshot_id) REFERENCES financial_snapshots(id),
+			FOREIGN KEY(goal_id) REFERENCES goals(id)
+		);
+		`,
+	},
 }
 
 // GetUserVersion retorna a versao atual do esquema do banco SQLite.
