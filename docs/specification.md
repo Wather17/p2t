@@ -29,7 +29,42 @@ Seja o conjunto de variáveis operacionais de um indivíduo em um período mensa
 
 ---
 
-### 1.3 Dedução Lógica das Equações
+### 1.3 Modelo de Deslocamento ($H_D$)
+
+$H_D$ pode ser obtido por dois modos:
+
+**A) Estimativa mensal por escala** (sem data de referência):
+$$H_D = \text{dias médios da escala} \times \text{horas diárias de deslocamento}$$
+
+| Escala | Dias médios/mês |
+|---|---|
+| 5x2 | 22 |
+| 6x1 | 26 |
+| 12x36 | 15 |
+| 4x3 | 17 |
+
+**B) Cálculo exato por calendário** (com `--shift-ref-date`): conta os plantões reais do mês de competência e aplica:
+
+$$H_D = \text{plantões} \times \text{horas diárias de deslocamento}$$
+
+Regras de contagem por escala:
+
+* **5x2**: dias de segunda a sexta-feira.
+* **6x1**: dias de segunda a sábado.
+* **4x3**: dias de segunda a quinta-feira.
+* **12x36**: dias $t$ tais que a diferença em dias em relação à data de referência é par: $t_i \equiv 0 \pmod 2$ — ciclo 12h on + 36h off = 48h, plantões a cada 2 dias.
+
+**Convenções do `--shift-ref-date` (escala 12x36):**
+
+* A data informada é o **início do turno** do plantão (não o término).
+* O plantão pertence ao mês de competência da **data de início** (turnos que cruzam a meia-noite contam no mês em que começam).
+* O conceito é **exclusivo da escala 12x36** — 5x2/6x1/4x3 contam apenas por regra de dias da semana.
+* Exemplo: plantão iniciado no dia 5 → os próximos são 7, 9, ... da mesma competência.
+* Se a refDate for um dia de folga (ou o término do turno), a paridade inverte e a contagem erra em ±1: informe sempre a data de início.
+
+---
+
+### 1.4 Dedução Lógica das Equações
 
 #### A) Valor Real da Hora Dedicada ($VRH$)
 O retorno financeiro real gerado por cada hora de vida dedicada ao trabalho é obtido pela razão entre a Liquidez Real ($S_L$) e a Carga Horária Total ($H_T$):
@@ -43,7 +78,7 @@ $$IDT = \left( \frac{D_E + C_I}{S_B} \right) \times 100$$
 
 ---
 
-### 1.4 Matriz de Decisão do $IDT$
+### 1.5 Matriz de Decisão do $IDT$
 A tese de permanência laboral baseia-se no valor de $IDT$ do mês atual ou da sua **Média Móvel de 3 Meses** ($\overline{IDT}_3$):
 
 $$\overline{IDT}_3 = \frac{\sum_{i=0}^{2} IDT_{t-i}}{3}$$

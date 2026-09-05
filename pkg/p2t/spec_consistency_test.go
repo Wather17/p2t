@@ -6,7 +6,7 @@ import (
 	"github.com/Wather17/p2t/pkg/p2t"
 )
 
-// TestSpecExampleTelemetry reproduz o exemplo da seção 1.3 de docs/specification.md
+// TestSpecExampleTelemetry reproduz o exemplo da seção 1.4 de docs/specification.md
 // (SB 5000, DF 800, DE 0, CI 200, HC 160, HD 33 => HT=193, SL=4000, VRH=20.73, IDT=4.00) e
 // falha se a implementacao divergir da especificacao.
 func TestSpecExampleTelemetry(t *testing.T) {
@@ -37,7 +37,7 @@ func TestSpecExampleTelemetry(t *testing.T) {
 		t.Errorf("IDT esperado 4.00, obtido %.4f", res.IDT)
 	}
 
-	// IDT3: com os tres ultimos IDTs 4.00 a media e 4.00 (secao 1.4)
+	// IDT3: com os tres ultimos IDTs 4.00 a media e 4.00 (secao 1.5)
 	idt3, err := p2t.CalculateIDT3([]float64{res.IDT, res.IDT, res.IDT})
 	if err != nil {
 		t.Fatalf("erro no calculo de IDT3: %v", err)
@@ -47,7 +47,7 @@ func TestSpecExampleTelemetry(t *testing.T) {
 	}
 }
 
-// TestIDTZoneBoundaries valida os limiares das zonas de decisao do IDT (spec secao 1.4):
+// TestIDTZoneBoundaries valida os limiares das zonas de decisao do IDT (spec secao 1.5):
 // < 10 verde, 10-15 amarela, >= 15 vermelha.
 func TestIDTZoneBoundaries(t *testing.T) {
 	cases := []struct {

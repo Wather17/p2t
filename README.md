@@ -65,7 +65,12 @@ Calcula o $VRH$, $IDT$, consulta o histórico no SQLite e gera o diagnóstico da
 #### Flags Disponíveis:
 * `-s, --gross-salary`: Salário Bruto nominal ($S_B$) **[Obrigatório]**.
 * `-H, --contract-hours`: Carga Horária Contratual em horas ($H_C$) **[Obrigatório]**.
-* `-d, --commute-hours`: Horas de Deslocamento mensal ($H_D$).
+* `-d, --commute-hours`: Horas de Deslocamento mensal ($H_D$) manual.
+* `-W, --schedule`: Escala de trabalho presencial (5x2, 6x1, 12x36, 4x3) — requer `-D`.
+* `-D, --daily-commute`: Horas diárias de deslocamento (ida + volta) para cálculo do HD via escala (ex.: `1.5`).
+* `-R, --shift-ref-date`: Data **de início** de um plantão 12x36 (`YYYY-MM-DD`); exclusiva do 12x36 — ativa o cálculo **exato por calendário**.
+* `-m, --reference-month`: Mês de competência (`YYYY-MM`; padrão: mês anterior).
+* `-I, --interactive`: Modo interativo (formulário guiado).
 * `-f, --fixed-deductions`: Descontos Legais Fixos ($D_F$: INSS, IRRF).
 * `-e, --error-deductions`: Descontos por erros operacionais ($D_E$).
 * `-c, --invisible-costs`: Custos invisíveis do bolso ($C_I$).
@@ -73,7 +78,7 @@ Calcula o $VRH$, $IDT$, consulta o histórico no SQLite e gera o diagnóstico da
 * `--db`: Caminho do banco SQLite personalizado (padrão: `~/.p2t/p2t.db`).
 * `--no-save`: Executa sem persistir o registro no SQLite.
 
-> **Nota:** a escala `-W/--schedule` (5x2, 6x1, 12x36, 4x3) só tem efeito acompanhada de `-D/--daily-commute > 0`; sem `-D`, o comando falha com erro claro em vez de ignorar a escala. Questões de cálculo exato por calendário e data de referência serão documentadas aqui.
+> **Prioridade do cálculo de HD:** com `-R` (e `-W 12x36`), o HD é calculado de forma **exata** pelo calendário do mês de competência (plantões do mês × horas diárias). Sem `-R`, `-W` + `-D` usa a **estimativa mensal** da escala (dias médios: 5x2=22, 6x1=26, 12x36=15, 4x3=17). Se `-d` for informado junto com escala, o valor calculado prevalece (aviso na saída).
 
 ---
 
