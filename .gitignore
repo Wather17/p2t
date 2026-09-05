@@ -13,3 +13,9 @@ dist/
 *.sqlite3
 *.db-shm
 *.db-wal
+agents/issue-architect.md
+.agents/skills/refine-issues.md
+.agents/skills/autonomous-batch.md
+.agents/skills/audit-issues/SKILL.md
+.agents/skills/refine-issues/SKILL.md
+.agents/skills/autonomous-batch/SKILL.md
