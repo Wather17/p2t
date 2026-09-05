@@ -1,0 +1,93 @@
+{
+  "id": "stable-foundation",
+  "title": "Fundação estável",
+  "context": "Pessoa com renda estável, compromissos controlados e uma reserva sendo financiada com regularidade.",
+  "question": "A pessoa consegue manter compromissos e avançar sua meta?",
+  "tolerance": 0.01,
+  "months": [
+    {
+      "reference_month": "2026-01",
+      "received_income": 5000,
+      "reserve_balance": 3000,
+      "planned_goal_contributions": 500,
+      "exceptional_costs": 0,
+      "recurring": [
+        {"name": "Moradia", "amount": 1000, "period": "monthly", "purpose": "life", "essentiality": "essential", "billing_day": 5, "status": "active", "last_reviewed": "2026-01"},
+        {"name": "Música", "amount": 50, "period": "monthly", "purpose": "life", "essentiality": "discretionary", "billing_day": 10, "status": "active", "last_reviewed": "2026-01"}
+      ],
+      "goals": [{"name": "Reserva", "target_amount": 4000, "deadline": "2026-06", "current_balance": 1000, "monthly_contribution": 500}],
+      "work": {"gross_salary": 5000, "fixed_deductions": 800, "error_deductions": 0, "invisible_costs": 200, "contract_hours": 160, "commute_hours": 33},
+      "expect": {"recurring_total": 1050, "goal_capacity": 3950, "free_margin": 3450, "goal_progress": {"Reserva": 25}, "vrh": 20.73, "idt": 4, "signals": ["goal_on_track"]}
+    },
+    {
+      "reference_month": "2026-02",
+      "received_income": 5000,
+      "reserve_balance": 3500,
+      "planned_goal_contributions": 500,
+      "exceptional_costs": 0,
+      "recurring": [
+        {"name": "Moradia", "amount": 1000, "period": "monthly", "purpose": "life", "essentiality": "essential", "billing_day": 5, "status": "active", "last_reviewed": "2026-01"},
+        {"name": "Música", "amount": 50, "period": "monthly", "purpose": "life", "essentiality": "discretionary", "billing_day": 10, "status": "active", "last_reviewed": "2026-01"}
+      ],
+      "goals": [{"name": "Reserva", "target_amount": 4000, "deadline": "2026-06", "current_balance": 1500, "monthly_contribution": 500}],
+      "work": {"gross_salary": 5000, "fixed_deductions": 800, "error_deductions": 0, "invisible_costs": 200, "contract_hours": 160, "commute_hours": 33},
+      "expect": {"recurring_total": 1050, "goal_capacity": 3950, "free_margin": 3450, "goal_progress": {"Reserva": 37.5}, "vrh": 20.73, "idt": 4, "signals": ["goal_on_track"]}
+    },
+    {
+      "reference_month": "2026-03",
+      "received_income": 5000,
+      "reserve_balance": 4000,
+      "planned_goal_contributions": 500,
+      "exceptional_costs": 0,
+      "recurring": [
+        {"name": "Moradia", "amount": 1000, "period": "monthly", "purpose": "life", "essentiality": "essential", "billing_day": 5, "status": "active", "last_reviewed": "2026-01"},
+        {"name": "Música", "amount": 50, "period": "monthly", "purpose": "life", "essentiality": "discretionary", "billing_day": 10, "status": "active", "last_reviewed": "2026-01"}
+      ],
+      "goals": [{"name": "Reserva", "target_amount": 4000, "deadline": "2026-06", "current_balance": 2000, "monthly_contribution": 500}],
+      "work": {"gross_salary": 5000, "fixed_deductions": 800, "error_deductions": 0, "invisible_costs": 200, "contract_hours": 160, "commute_hours": 33},
+      "expect": {"recurring_total": 1050, "goal_capacity": 3950, "free_margin": 3450, "goal_progress": {"Reserva": 50}, "vrh": 20.73, "idt": 4, "signals": ["goal_on_track"]}
+    },
+    {
+      "reference_month": "2026-04",
+      "received_income": 5000,
+      "reserve_balance": 4500,
+      "planned_goal_contributions": 500,
+      "exceptional_costs": 0,
+      "recurring": [
+        {"name": "Moradia", "amount": 1000, "period": "monthly", "purpose": "life", "essentiality": "essential", "billing_day": 5, "status": "active", "last_reviewed": "2026-01"},
+        {"name": "Música", "amount": 50, "period": "monthly", "purpose": "life", "essentiality": "discretionary", "billing_day": 10, "status": "active", "last_reviewed": "2026-01"}
+      ],
+      "goals": [{"name": "Reserva", "target_amount": 4000, "deadline": "2026-06", "current_balance": 2500, "monthly_contribution": 500}],
+      "work": {"gross_salary": 5000, "fixed_deductions": 800, "error_deductions": 0, "invisible_costs": 200, "contract_hours": 160, "commute_hours": 33},
+      "expect": {"recurring_total": 1050, "goal_capacity": 3950, "free_margin": 3450, "goal_progress": {"Reserva": 62.5}, "vrh": 20.73, "idt": 4, "signals": ["goal_on_track"]}
+    },
+    {
+      "reference_month": "2026-05",
+      "received_income": 5000,
+      "reserve_balance": 5000,
+      "planned_goal_contributions": 500,
+      "exceptional_costs": 0,
+      "recurring": [
+        {"name": "Moradia", "amount": 1000, "period": "monthly", "purpose": "life", "essentiality": "essential", "billing_day": 5, "status": "active", "last_reviewed": "2026-01"},
+        {"name": "Música", "amount": 50, "period": "monthly", "purpose": "life", "essentiality": "discretionary", "billing_day": 10, "status": "active", "last_reviewed": "2026-01"}
+      ],
+      "goals": [{"name": "Reserva", "target_amount": 4000, "deadline": "2026-06", "current_balance": 3000, "monthly_contribution": 500}],
+      "work": {"gross_salary": 5000, "fixed_deductions": 800, "error_deductions": 0, "invisible_costs": 200, "contract_hours": 160, "commute_hours": 33},
+      "expect": {"recurring_total": 1050, "goal_capacity": 3950, "free_margin": 3450, "goal_progress": {"Reserva": 75}, "vrh": 20.73, "idt": 4, "signals": ["goal_on_track"]}
+    },
+    {
+      "reference_month": "2026-06",
+      "received_income": 5000,
+      "reserve_balance": 5500,
+      "planned_goal_contributions": 500,
+      "exceptional_costs": 0,
+      "recurring": [
+        {"name": "Moradia", "amount": 1000, "period": "monthly", "purpose": "life", "essentiality": "essential", "billing_day": 5, "status": "active", "last_reviewed": "2026-01"},
+        {"name": "Música", "amount": 50, "period": "monthly", "purpose": "life", "essentiality": "discretionary", "billing_day": 10, "status": "active", "last_reviewed": "2026-01"}
+      ],
+      "goals": [{"name": "Reserva", "target_amount": 4000, "deadline": "2026-06", "current_balance": 3500, "monthly_contribution": 500}],
+      "work": {"gross_salary": 5000, "fixed_deductions": 800, "error_deductions": 0, "invisible_costs": 200, "contract_hours": 160, "commute_hours": 33},
+      "expect": {"recurring_total": 1050, "goal_capacity": 3950, "free_margin": 3450, "goal_progress": {"Reserva": 87.5}, "vrh": 20.73, "idt": 4, "signals": ["goal_on_track"]}
+    }
+  ]
+}

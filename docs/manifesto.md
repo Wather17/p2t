@@ -58,6 +58,20 @@ O VRH e o IDT não são o produto inteiro. São instrumentos para perceber corro
 
 Um mês ruim não determina uma demissão. Os sinais devem ser interpretados junto com margem financeira, reservas, metas, tendência histórica e alternativas disponíveis. O p2t exibe alertas explicáveis, não ordens automáticas.
 
+### 7. Cenários são TDD filosófico
+
+Os princípios do p2t devem ser testados como histórias financeiras, não apenas como fórmulas isoladas. Um cenário descreve uma pessoa fictícia ao longo de vários meses, declara o que deveria ser percebido e transforma essa expectativa em um teste executável.
+
+O ciclo é:
+
+1. Escrever a história e a pergunta decisória.
+2. Definir métricas e sinais esperados.
+3. Rodar a história contra o modelo atual.
+4. Implementar a menor mudança necessária.
+5. Preservar os cenários anteriores como contratos do produto.
+
+Os cenários canônicos ficam em `pkg/p2t/scenario/testdata/` e validam números e decisões. Eles são fixos, determinísticos e não substituem o extrato nem tentam representar uma verdade universal sobre como cada pessoa deve viver.
+
 ## Fechamento mensal
 
 O fechamento mensal é a unidade principal de acompanhamento. Ele registra apenas:

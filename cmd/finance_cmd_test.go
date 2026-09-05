@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/Wather17/p2t/cmd"
+	"github.com/Wather17/p2t/pkg/p2t"
+	"github.com/Wather17/p2t/pkg/storage"
 )
 
 func executeCommand(t *testing.T, args ...string) string {
@@ -106,5 +108,48 @@ func TestCloseInteractive(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "Renda Recebida: R$ 5000.00") {
 		t.Fatalf("renda do fluxo interativo não apareceu: %s", out.String())
+	}
+}
+
+func TestCloseSmokeWithWorkTelemetry(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "finance.db")
+	db, err := storage.OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("falha ao abrir banco: %v", err)
+	}
+	repo := storage.NewRepository(db)
+	input := p2t.TelemetryInput{
+		GrossSalary: 3000, FixedDeductions: 400, ErrorDeductions: 500,
+		InvisibleCosts: 2300, ContractHours: 160, CommuteHours: 40,
+	}
+	result, err := p2t.CalculateTelemetry(input)
+	if err != nil {
+		db.Close()
+		t.Fatalf("falha ao calcular telemetria: %v", err)
+	}
+	if _, err := repo.SaveTelemetry(input, result, "2026-03"); err != nil {
+		db.Close()
+		t.Fatalf("falha ao salvar telemetria: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("falha ao fechar banco: %v", err)
+	}
+
+	root := cmd.NewRootCmd()
+	out := new(bytes.Buffer)
+	root.SetOut(out)
+	root.SetArgs([]string{
+		"close", "--db", dbPath, "--reference-month", "2026-03",
+		"--received-income", "2600", "--reserve-balance", "600",
+	})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("close com telemetria falhou: %v", err)
+	}
+	text := out.String()
+	if !strings.Contains(text, "Telemetria do trabalho: VRH R$ -1.00/h | IDT 93.33%") {
+		t.Fatalf("resumo trabalhista não apareceu: %s", text)
+	}
+	if !strings.Contains(text, "retorno por hora não positivo") {
+		t.Fatalf("sinal de retorno negativo não apareceu: %s", text)
 	}
 }

@@ -183,6 +183,8 @@ Para rodar a suíte completa de testes unitários e de integração:
 go test -v ./...
 ```
 
+A suíte também executa cenários financeiros multi-mês que validam a filosofia do produto, como estabilidade, crescimento de assinaturas, pagamento para trabalhar e deterioração persistente do retorno laboral.
+
 ---
 
 ## 📜 Licença

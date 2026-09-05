@@ -1,0 +1,12 @@
+{
+  "id": "paying-to-work",
+  "title": "Pagando para trabalhar",
+  "context": "Os custos diretamente causados pelo emprego corroem toda a liquidez e tornam o retorno por hora negativo.",
+  "question": "O trabalho ainda entrega retorno financeiro positivo?",
+  "tolerance": 0.01,
+  "months": [
+    {"reference_month": "2026-01", "received_income": 2600, "reserve_balance": 1000, "planned_goal_contributions": 0, "exceptional_costs": 0, "recurring": [], "goals": [], "work": {"gross_salary": 3000, "fixed_deductions": 400, "error_deductions": 500, "invisible_costs": 2300, "contract_hours": 160, "commute_hours": 40}, "expect": {"recurring_total": 0, "goal_capacity": 2600, "free_margin": 2600, "vrh": -1, "idt": 93.33, "signals": ["work_cash_result_negative", "work_cost_high", "work_corrosion_high", "work_return_negative"]}},
+    {"reference_month": "2026-02", "received_income": 2600, "reserve_balance": 800, "planned_goal_contributions": 0, "exceptional_costs": 0, "recurring": [], "goals": [], "work": {"gross_salary": 3000, "fixed_deductions": 400, "error_deductions": 500, "invisible_costs": 2300, "contract_hours": 160, "commute_hours": 40}, "expect": {"recurring_total": 0, "goal_capacity": 2600, "free_margin": 2600, "vrh": -1, "idt": 93.33, "signals": ["work_cash_result_negative", "work_cost_high", "work_corrosion_high", "work_return_negative"]}},
+    {"reference_month": "2026-03", "received_income": 2600, "reserve_balance": 600, "planned_goal_contributions": 0, "exceptional_costs": 0, "recurring": [], "goals": [], "work": {"gross_salary": 3000, "fixed_deductions": 400, "error_deductions": 500, "invisible_costs": 2300, "contract_hours": 160, "commute_hours": 40}, "expect": {"recurring_total": 0, "goal_capacity": 2600, "free_margin": 2600, "vrh": -1, "idt": 93.33, "signals": ["work_cash_result_negative", "work_cost_high", "work_corrosion_high", "work_return_negative"]}}
+  ]
+}

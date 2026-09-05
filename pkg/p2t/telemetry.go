@@ -207,6 +207,6 @@ func EvaluateIDTZone(idt3 float64) (IDTZone, string) {
 	case idt3 >= ZoneIDTGreenThreshold && idt3 < ZoneIDTRedThreshold:
 		return ZoneYellow, "Alerta de Corrosao / Ativar busca passiva de vagas"
 	default:
-		return ZoneRed, "Inviabilidade Financeira / Gatilho de Saida Ativado"
+		return ZoneRed, "Corrosao elevada / considerar um plano de saida"
 	}
 }
